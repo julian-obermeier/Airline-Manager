@@ -20,8 +20,15 @@ return new class extends Migration
             $table->json('settings')->nullable();
             $table->timestamps();
 
-            $table->unique(['airline_id', 'origin_airport_id', 'destination_airport_id']);
-            $table->index(['world_id', 'origin_airport_id', 'destination_airport_id']);
+            // Explicit short names keep indexes below MariaDB/MySQL's 64-char identifier limit.
+            $table->unique(
+                ['airline_id', 'origin_airport_id', 'destination_airport_id'],
+                'routes_airline_origin_dest_uq'
+            );
+            $table->index(
+                ['world_id', 'origin_airport_id', 'destination_airport_id'],
+                'routes_world_origin_dest_idx'
+            );
         });
 
         Schema::create('flights', function (Blueprint $table): void {
@@ -42,9 +49,18 @@ return new class extends Migration
             $table->json('operational_data')->nullable();
             $table->timestamps();
 
-            $table->unique(['world_id', 'flight_number', 'scheduled_departure_at']);
-            $table->index(['world_id', 'status', 'scheduled_departure_at']);
-            $table->index(['aircraft_id', 'scheduled_departure_at', 'scheduled_arrival_at']);
+            $table->unique(
+                ['world_id', 'flight_number', 'scheduled_departure_at'],
+                'flights_world_number_departure_uq'
+            );
+            $table->index(
+                ['world_id', 'status', 'scheduled_departure_at'],
+                'flights_world_status_departure_idx'
+            );
+            $table->index(
+                ['aircraft_id', 'scheduled_departure_at', 'scheduled_arrival_at'],
+                'flights_aircraft_schedule_idx'
+            );
         });
     }
 
