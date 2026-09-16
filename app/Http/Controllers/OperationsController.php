@@ -13,6 +13,7 @@ use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
 use App\Models\World;
 use App\Services\Commercial\RevenueManagementService;
+use App\Services\Operations\MaintenanceService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -23,8 +24,10 @@ use Illuminate\View\View;
 
 class OperationsController extends Controller
 {
-    public function __construct(private readonly RevenueManagementService $revenueManagement)
-    {
+    public function __construct(
+        private readonly RevenueManagementService $revenueManagement,
+        private readonly MaintenanceService $maintenance,
+    ) {
     }
 
     public function index(Request $request): View|RedirectResponse
@@ -147,6 +150,13 @@ class OperationsController extends Controller
                 ],
                 'metadata' => [
                     'acquired_via' => 'new_aircraft_market',
+                    'maintenance' => [
+                        'a_check_baseline_hours' => 0,
+                        'a_check_baseline_cycles' => 0,
+                        'c_check_baseline_hours' => 0,
+                        'c_check_baseline_cycles' => 0,
+                        'grounded_by_system' => false,
+                    ],
                 ],
             ]);
 
@@ -323,6 +333,12 @@ class OperationsController extends Controller
 
         $departure = Carbon::parse($validated['scheduled_departure_at']);
         $arrival = $departure->copy()->addMinutes($route->planned_block_minutes);
+
+        if ($this->maintenance->hasMaintenanceConflict($aircraft, $departure, $arrival)) {
+            throw ValidationException::withMessages([
+                'scheduled_departure_at' => 'Der Flug überschneidet sich mit einem geplanten Wartungsfenster dieses Flugzeugs.',
+            ]);
+        }
 
         $overlap = Flight::query()
             ->where('aircraft_id', $aircraft->id)
