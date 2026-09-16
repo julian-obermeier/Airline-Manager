@@ -39,7 +39,9 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/operations/fleet/purchase', [FleetMarketController::class, 'orderNew'])->name('operations.fleet.purchase');
     Route::post('/operations/routes', [OperationsController::class, 'storeRoute'])->name('operations.routes.store');
     Route::patch('/operations/routes/{route}/fares', [OperationsController::class, 'updateRouteFares'])->name('operations.routes.fares.update');
-    Route::post('/operations/flights', [OperationsController::class, 'scheduleFlight'])->name('operations.flights.store');
+    Route::post('/operations/flights', [OperationsController::class, 'scheduleFlight'])
+        ->middleware('aircraft.position')
+        ->name('operations.flights.store');
 
     Route::get('/fleet-market', [FleetMarketController::class, 'index'])->name('fleet-market.index');
     Route::post('/fleet-market/new', [FleetMarketController::class, 'orderNew'])->name('fleet-market.new');
