@@ -10,13 +10,16 @@ use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
 use App\Models\World;
 use App\Services\Commercial\RevenueManagementService;
+use App\Services\Operations\FlightScheduleService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class FlightSimulationService
 {
-    public function __construct(private readonly RevenueManagementService $revenueManagement)
-    {
+    public function __construct(
+        private readonly RevenueManagementService $revenueManagement,
+        private readonly FlightScheduleService $flightSchedules,
+    ) {
     }
 
     public function tick(?Carbon $realNow = null): array
@@ -24,8 +27,13 @@ class FlightSimulationService
         $realNow ??= now();
         $summary = [
             'worlds' => 0,
+            'schedules_checked' => 0,
+            'flights_generated' => 0,
+            'rotations_skipped' => 0,
             'flights_checked' => 0,
             'bookings_updated' => 0,
+            'delays_evaluated' => 0,
+            'delayed_flights' => 0,
             'boarding' => 0,
             'departed' => 0,
             'in_air' => 0,
@@ -38,6 +46,12 @@ class FlightSimulationService
             ->each(function (World $world) use ($realNow, &$summary): void {
                 $simulationNow = $this->advanceWorldClock($world, $realNow);
                 $summary['worlds']++;
+
+                $planning = $this->flightSchedules->generateForWorld($world, $simulationNow);
+                $summary['schedules_checked'] += $planning['schedules'];
+                $summary['flights_generated'] += $planning['flights_created'];
+                $summary['rotations_skipped'] += $planning['rotations_skipped'];
+
                 $bookingHorizon = $simulationNow->copy()->addDays(max(1, (int) config('simulation.booking_window_days', 14)));
 
                 $flights = Flight::query()
@@ -50,6 +64,14 @@ class FlightSimulationService
 
                 foreach ($flights as $flight) {
                     $summary['flights_checked']++;
+
+                    $evaluatedDelay = $this->ensureOperationalDelay($flight, $simulationNow);
+                    if ($evaluatedDelay !== null) {
+                        $summary['delays_evaluated']++;
+                        if ($evaluatedDelay > 0) {
+                            $summary['delayed_flights']++;
+                        }
+                    }
 
                     if (in_array($flight->status, ['scheduled', 'boarding'], true)
                         && $this->updateBookings($flight, $simulationNow)) {
@@ -124,6 +146,84 @@ class FlightSimulationService
         }
 
         return null;
+    }
+
+    private function ensureOperationalDelay(Flight $flight, Carbon $simulationNow): ?int
+    {
+        if (! in_array($flight->status, ['scheduled', 'boarding'], true)) {
+            return null;
+        }
+
+        $evaluationAt = $flight->scheduled_departure_at
+            ->copy()
+            ->subMinutes(max(30, (int) config('simulation.delay_evaluation_minutes', 180)));
+
+        if ($simulationNow->lessThan($evaluationAt)) {
+            return null;
+        }
+
+        $data = $flight->operational_data ?? [];
+        if (data_get($data, 'operations.delay_evaluated')) {
+            return null;
+        }
+
+        $flight->loadMissing(['aircraft.type']);
+        $seed = (int) sprintf('%u', crc32($flight->id.':'.$flight->scheduled_departure_at->format('YmdHi')));
+        $percentile = $seed % 100;
+        $baseDelay = match (true) {
+            $percentile < 62 => 0,
+            $percentile < 82 => 5 + ($seed % 11),
+            $percentile < 95 => 16 + ($seed % 20),
+            default => 36 + ($seed % 40),
+        };
+
+        $condition = (float) ($flight->aircraft?->condition_percent ?? 100);
+        $technicalPenalty = $condition < 95
+            ? min(30, (int) ceil((95 - $condition) * 0.9))
+            : 0;
+        $delay = $baseDelay + $technicalPenalty;
+        $rotationDelay = 0;
+
+        if ($flight->aircraft_id && $flight->aircraft) {
+            $previous = Flight::query()
+                ->where('aircraft_id', $flight->aircraft_id)
+                ->where('id', '!=', $flight->id)
+                ->whereNotIn('status', ['cancelled'])
+                ->where('scheduled_departure_at', '<', $flight->scheduled_departure_at)
+                ->orderByDesc('scheduled_arrival_at')
+                ->first();
+
+            if ($previous) {
+                $previousArrival = $previous->actual_arrival_at
+                    ? $previous->actual_arrival_at->copy()
+                    : $previous->scheduled_arrival_at->copy()->addMinutes((int) $previous->delay_minutes);
+                $minimumTurnaround = $this->flightSchedules->minimumTurnaroundMinutes($flight->aircraft);
+                $earliestDeparture = $previousArrival->addMinutes($minimumTurnaround);
+                $currentPlannedDeparture = $flight->scheduled_departure_at->copy()->addMinutes($delay);
+
+                if ($earliestDeparture->greaterThan($currentPlannedDeparture)) {
+                    $rotationDelay = max(0, $flight->scheduled_departure_at->diffInMinutes($earliestDeparture, false));
+                    $delay = max($delay, $rotationDelay);
+                }
+            }
+        }
+
+        $delay = min(240, max(0, $delay));
+        $data['operations'] = array_merge($data['operations'] ?? [], [
+            'delay_evaluated' => true,
+            'delay_evaluated_at' => $simulationNow->toIso8601String(),
+            'base_delay_minutes' => $baseDelay,
+            'technical_delay_minutes' => $technicalPenalty,
+            'rotation_delay_minutes' => $rotationDelay,
+            'final_delay_minutes' => $delay,
+        ]);
+
+        $flight->forceFill([
+            'delay_minutes' => $delay,
+            'operational_data' => $data,
+        ])->save();
+
+        return $delay;
     }
 
     private function updateBookings(Flight $flight, Carbon $simulationNow, bool $finalize = false): bool
