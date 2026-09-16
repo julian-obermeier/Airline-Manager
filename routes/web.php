@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AirlineController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\FlightScheduleController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\OperationsController;
 use App\Http\Controllers\SimulationController;
@@ -35,4 +36,8 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/operations/routes', [OperationsController::class, 'storeRoute'])->name('operations.routes.store');
     Route::patch('/operations/routes/{route}/fares', [OperationsController::class, 'updateRouteFares'])->name('operations.routes.fares.update');
     Route::post('/operations/flights', [OperationsController::class, 'scheduleFlight'])->name('operations.flights.store');
+
+    Route::get('/schedules', [FlightScheduleController::class, 'index'])->name('schedules.index');
+    Route::post('/schedules', [FlightScheduleController::class, 'store'])->name('schedules.store');
+    Route::patch('/schedules/{schedule}/toggle', [FlightScheduleController::class, 'toggle'])->name('schedules.toggle');
 });
