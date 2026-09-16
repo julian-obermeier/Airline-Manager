@@ -134,7 +134,7 @@ class AirlineController extends Controller
                 'reference_type' => 'airline_creation',
                 'reference_id' => $airline->id,
                 'description' => 'Startkapital bei Airline-Gründung',
-                'occurred_at' => now(),
+                'occurred_at' => $world->simulated_at ?? now(),
                 'posted_at' => now(),
                 'metadata' => ['source' => 'system'],
             ]);
