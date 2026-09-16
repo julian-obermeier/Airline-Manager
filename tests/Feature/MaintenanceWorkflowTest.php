@@ -3,12 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\AircraftMaintenanceEvent;
+use App\Models\AircraftProcurement;
 use App\Models\AircraftType;
 use App\Models\Airline;
 use App\Models\Airport;
 use App\Models\LedgerTransaction;
 use App\Models\World;
 use App\Services\Operations\MaintenanceService;
+use App\Services\Operations\ProcurementService;
 use Database\Seeders\GameBootstrapSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -51,7 +53,10 @@ class MaintenanceWorkflowTest extends TestCase
         $this->post(route('operations.fleet.purchase'), [
             'aircraft_type_id' => $type->id,
             'registration' => 'D-ATCH',
-        ])->assertRedirect('/operations');
+        ])->assertRedirect('/fleet-market');
+
+        $procurement = AircraftProcurement::query()->where('registration', 'D-ATCH')->firstOrFail();
+        app(ProcurementService::class)->processWorld($world, $procurement->delivery_due_at->copy()->addMinute());
 
         $aircraft = $airline->aircraft()->firstOrFail();
         $aircraft->forceFill([
@@ -117,13 +122,9 @@ class MaintenanceWorkflowTest extends TestCase
             'reference_id' => $event->id,
         ]);
 
-        $transactionsBefore = LedgerTransaction::query()
-            ->where('reference_type', 'aircraft_maintenance')
-            ->count();
+        $transactionsBefore = LedgerTransaction::query()->where('reference_type', 'aircraft_maintenance')->count();
         $maintenance->processWorld($world, $event->planned_end_at->copy()->addHours(2));
-        $transactionsAfter = LedgerTransaction::query()
-            ->where('reference_type', 'aircraft_maintenance')
-            ->count();
+        $transactionsAfter = LedgerTransaction::query()->where('reference_type', 'aircraft_maintenance')->count();
         $this->assertSame($transactionsBefore, $transactionsAfter);
 
         $this->get(route('maintenance.index'))
