@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AirlineController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\FleetMarketController;
 use App\Http\Controllers\FlightScheduleController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\MaintenanceController;
@@ -37,6 +38,11 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/operations/routes', [OperationsController::class, 'storeRoute'])->name('operations.routes.store');
     Route::patch('/operations/routes/{route}/fares', [OperationsController::class, 'updateRouteFares'])->name('operations.routes.fares.update');
     Route::post('/operations/flights', [OperationsController::class, 'scheduleFlight'])->name('operations.flights.store');
+
+    Route::get('/fleet-market', [FleetMarketController::class, 'index'])->name('fleet-market.index');
+    Route::post('/fleet-market/new', [FleetMarketController::class, 'orderNew'])->name('fleet-market.new');
+    Route::post('/fleet-market/lease', [FleetMarketController::class, 'orderLease'])->name('fleet-market.lease');
+    Route::post('/fleet-market/used/{offer}', [FleetMarketController::class, 'buyUsed'])->name('fleet-market.used');
 
     Route::get('/schedules', [FlightScheduleController::class, 'index'])->name('schedules.index');
     Route::post('/schedules', [FlightScheduleController::class, 'store'])->name('schedules.store');
