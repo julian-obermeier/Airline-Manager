@@ -21,10 +21,10 @@ return new class extends Migration
             $table->integer('elevation_ft')->nullable();
             $table->unsignedInteger('passenger_capacity_yearly')->nullable();
             $table->unsignedBigInteger('cargo_capacity_tonnes_yearly')->nullable();
-            $table->jsonb('runways')->nullable();
-            $table->jsonb('operational_restrictions')->nullable();
-            $table->jsonb('metadata')->nullable();
-            $table->timestampsTz();
+            $table->json('runways')->nullable();
+            $table->json('operational_restrictions')->nullable();
+            $table->json('metadata')->nullable();
+            $table->timestamps();
         });
 
         Schema::create('aircraft_types', function (Blueprint $table): void {
@@ -43,8 +43,8 @@ return new class extends Migration
             $table->bigInteger('reference_purchase_price_minor')->nullable();
             $table->char('reference_currency', 3)->default('EUR');
             $table->string('production_status', 32)->default('active');
-            $table->jsonb('technical_data')->nullable();
-            $table->timestampsTz();
+            $table->json('technical_data')->nullable();
+            $table->timestamps();
             $table->unique(['manufacturer', 'model', 'variant']);
         });
     }
