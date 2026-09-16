@@ -9,17 +9,23 @@ use App\Models\LedgerAccount;
 use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
 use App\Models\World;
+use App\Services\Commercial\RevenueManagementService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class FlightSimulationService
 {
+    public function __construct(private readonly RevenueManagementService $revenueManagement)
+    {
+    }
+
     public function tick(?Carbon $realNow = null): array
     {
         $realNow ??= now();
         $summary = [
             'worlds' => 0,
             'flights_checked' => 0,
+            'bookings_updated' => 0,
             'boarding' => 0,
             'departed' => 0,
             'in_air' => 0,
@@ -32,17 +38,24 @@ class FlightSimulationService
             ->each(function (World $world) use ($realNow, &$summary): void {
                 $simulationNow = $this->advanceWorldClock($world, $realNow);
                 $summary['worlds']++;
+                $bookingHorizon = $simulationNow->copy()->addDays(max(1, (int) config('simulation.booking_window_days', 14)));
 
                 $flights = Flight::query()
-                    ->with(['route.destination', 'aircraft.type', 'airline'])
+                    ->with(['route.origin', 'route.destination', 'aircraft.type', 'airline'])
                     ->where('world_id', $world->id)
                     ->whereIn('status', ['scheduled', 'boarding', 'departed', 'in_air'])
-                    ->where('scheduled_departure_at', '<=', $simulationNow->copy()->addMinutes(config('simulation.boarding_minutes', 30)))
+                    ->where('scheduled_departure_at', '<=', $bookingHorizon)
                     ->orderBy('scheduled_departure_at')
                     ->get();
 
                 foreach ($flights as $flight) {
                     $summary['flights_checked']++;
+
+                    if (in_array($flight->status, ['scheduled', 'boarding'], true)
+                        && $this->updateBookings($flight, $simulationNow)) {
+                        $summary['bookings_updated']++;
+                    }
+
                     $result = $this->processFlight($flight, $simulationNow);
 
                     if ($result && array_key_exists($result, $summary)) {
@@ -85,11 +98,12 @@ class FlightSimulationService
         }
 
         if ($simulationNow->greaterThanOrEqualTo($departureAt->copy()->addMinutes(10))) {
-            $this->ensureDemand($flight);
+            $this->updateBookings($flight, $departureAt, true);
             $this->markDeparted($flight, $departureAt);
 
             if ($flight->status !== 'in_air') {
                 $flight->forceFill(['status' => 'in_air'])->save();
+
                 return 'in_air';
             }
 
@@ -97,13 +111,13 @@ class FlightSimulationService
         }
 
         if ($simulationNow->greaterThanOrEqualTo($departureAt)) {
-            $this->ensureDemand($flight);
+            $this->updateBookings($flight, $departureAt, true);
 
             return $this->markDeparted($flight, $departureAt) ? 'departed' : null;
         }
 
         if ($simulationNow->greaterThanOrEqualTo($boardingAt) && $flight->status === 'scheduled') {
-            $this->ensureDemand($flight);
+            $this->updateBookings($flight, $simulationNow);
             $flight->forceFill(['status' => 'boarding'])->save();
 
             return 'boarding';
@@ -112,37 +126,137 @@ class FlightSimulationService
         return null;
     }
 
-    private function ensureDemand(Flight $flight): void
+    private function updateBookings(Flight $flight, Carbon $simulationNow, bool $finalize = false): bool
     {
-        if ($flight->passengers_booked > 0 || data_get($flight->operational_data, 'demand_generated')) {
-            return;
+        if (! $finalize && ! in_array($flight->status, ['scheduled', 'boarding'], true)) {
+            return false;
         }
 
-        $flight->loadMissing(['aircraft.type', 'airline']);
+        $flight->loadMissing(['aircraft.type', 'airline', 'route']);
 
-        $seats = max(1, (int) data_get($flight->aircraft?->configuration, 'seats', $flight->aircraft?->type?->typical_seats ?? 1));
-        $businessModel = $flight->airline?->business_model ?? 'hybrid';
-        $baseLoadFactor = match ($businessModel) {
-            'low_cost' => 0.79,
-            'full_service' => 0.72,
-            'regional' => 0.70,
-            'cargo' => 0.35,
-            default => 0.75,
-        };
-
-        $variation = (abs(crc32($flight->id)) % 1600) / 10000;
-        $loadFactor = min(0.95, max(0.50, $baseLoadFactor + $variation));
-        $passengers = min($seats, max(1, (int) round($seats * $loadFactor)));
+        if (! $flight->aircraft || ! $flight->airline || ! $flight->route) {
+            return false;
+        }
 
         $data = $flight->operational_data ?? [];
-        $data['demand_generated'] = true;
-        $data['load_factor'] = round($passengers / $seats, 4);
-        $data['seat_capacity'] = $seats;
+        $commercial = $data['commercial'] ?? [];
+        $cabins = $commercial['cabins'] ?? null;
+        $totalSeats = max(1, (int) data_get($flight->aircraft->configuration, 'seats', $flight->aircraft->type?->typical_seats ?? 1));
+
+        if (! is_array($cabins) || $cabins === []) {
+            $layout = $this->revenueManagement->cabinLayout($totalSeats, $flight->airline->business_model);
+            $fares = $this->revenueManagement->routeFares($flight->route, $flight->airline->business_model);
+            $cabins = [
+                'economy' => ['capacity' => $layout['economy'], 'fare_minor' => $fares['economy_minor'], 'booked' => 0],
+                'business' => ['capacity' => $layout['business'], 'fare_minor' => $fares['business_minor'], 'booked' => 0],
+                'first' => ['capacity' => $layout['first'], 'fare_minor' => $fares['first_minor'], 'booked' => 0],
+            ];
+        }
+
+        $referenceFares = $this->revenueManagement->defaultFares((float) $flight->route->distance_km, $flight->airline->business_model);
+        $demandIndex = (float) ($commercial['route_demand_index'] ?? data_get($flight->route->settings, 'demand_index', 1.0));
+        $progress = $finalize ? 1.0 : $this->bookingProgress($flight, $simulationNow);
+        $dayFactor = in_array($flight->scheduled_departure_at->dayOfWeekIso, [5, 7], true) ? 1.06 : 1.00;
+        $previousPassengers = (int) $flight->passengers_booked;
+        $totalBooked = 0;
+        $totalCapacity = 0;
+
+        foreach (['economy', 'business', 'first'] as $cabin) {
+            $capacity = max(0, (int) data_get($cabins, $cabin.'.capacity', 0));
+            $fareMinor = max(0, (int) data_get($cabins, $cabin.'.fare_minor', 0));
+            $alreadyBooked = max(0, (int) data_get($cabins, $cabin.'.booked', 0));
+            $totalCapacity += $capacity;
+
+            if ($capacity === 0 || $fareMinor === 0) {
+                $cabins[$cabin]['booked'] = 0;
+                $cabins[$cabin]['revenue_minor'] = 0;
+                continue;
+            }
+
+            $baseLoad = $this->baseCabinLoadFactor($flight->airline->business_model, $cabin);
+            $referenceFareMinor = max(1, (int) ($referenceFares[$cabin.'_minor'] ?? $fareMinor));
+            $sensitivity = match ($cabin) {
+                'economy' => 1.25,
+                'business' => 0.75,
+                default => 0.55,
+            };
+            $priceFactor = pow($referenceFareMinor / max(1, $fareMinor), $sensitivity);
+            $variationSeed = (int) sprintf('%u', crc32($flight->id.':'.$cabin));
+            $variation = (($variationSeed % 21) - 10) / 100;
+            $targetLoadFactor = min(0.98, max(0.05, ($baseLoad + $variation) * $demandIndex * $dayFactor * $priceFactor));
+            $targetBooked = min($capacity, (int) floor($capacity * $targetLoadFactor * $progress));
+            $booked = min($capacity, max($alreadyBooked, $targetBooked));
+
+            $cabins[$cabin]['capacity'] = $capacity;
+            $cabins[$cabin]['fare_minor'] = $fareMinor;
+            $cabins[$cabin]['booked'] = $booked;
+            $cabins[$cabin]['revenue_minor'] = $booked * $fareMinor;
+            $cabins[$cabin]['target_load_factor'] = round($targetLoadFactor, 4);
+            $totalBooked += $booked;
+        }
+
+        $data['commercial'] = [
+            'route_demand_index' => $demandIndex,
+            'booking_window_days' => (int) config('simulation.booking_window_days', 14),
+            'booking_progress' => round($progress, 4),
+            'cabins' => $cabins,
+        ];
+        $data['load_factor'] = $totalCapacity > 0 ? round($totalBooked / $totalCapacity, 4) : 0;
+        $data['seat_capacity'] = $totalCapacity;
+        $data['demand_generated'] = $finalize || $progress >= 0.999;
+
+        $changed = $totalBooked !== $previousPassengers
+            || data_get($flight->operational_data, 'commercial.booking_progress') !== $data['commercial']['booking_progress'];
 
         $flight->forceFill([
-            'passengers_booked' => $passengers,
+            'passengers_booked' => $totalBooked,
             'operational_data' => $data,
         ])->save();
+
+        return $changed;
+    }
+
+    private function bookingProgress(Flight $flight, Carbon $simulationNow): float
+    {
+        $windowMinutes = max(1440, ((int) config('simulation.booking_window_days', 14)) * 1440);
+        $minutesToDeparture = $simulationNow->diffInMinutes($flight->scheduled_departure_at, false);
+
+        if ($minutesToDeparture <= 0) {
+            return 1.0;
+        }
+
+        if ($minutesToDeparture >= $windowMinutes) {
+            return 0.08;
+        }
+
+        $elapsed = 1 - ($minutesToDeparture / $windowMinutes);
+
+        return min(1.0, max(0.08, 0.08 + (0.92 * pow($elapsed, 1.25))));
+    }
+
+    private function baseCabinLoadFactor(string $businessModel, string $cabin): float
+    {
+        return match ($cabin) {
+            'economy' => match ($businessModel) {
+                'low_cost' => 0.90,
+                'full_service' => 0.80,
+                'regional' => 0.78,
+                'cargo' => 0.25,
+                default => 0.84,
+            },
+            'business' => match ($businessModel) {
+                'low_cost' => 0.42,
+                'full_service' => 0.69,
+                'regional' => 0.52,
+                'cargo' => 0.10,
+                default => 0.60,
+            },
+            default => match ($businessModel) {
+                'full_service' => 0.50,
+                'cargo' => 0.05,
+                default => 0.38,
+            },
+        };
     }
 
     private function markDeparted(Flight $flight, Carbon $departureAt): bool
@@ -182,7 +296,7 @@ class FlightSimulationService
 
         DB::transaction(function () use ($flight, $departureAt, $arrivalAt, &$completed): void {
             $locked = Flight::query()
-                ->with(['route.destination', 'aircraft.type', 'airline'])
+                ->with(['route.origin', 'route.destination', 'aircraft.type', 'airline'])
                 ->lockForUpdate()
                 ->findOrFail($flight->id);
 
@@ -190,7 +304,9 @@ class FlightSimulationService
                 return;
             }
 
-            $this->ensureDemand($locked);
+            $this->updateBookings($locked, $departureAt, true);
+            $locked->refresh();
+            $locked->loadMissing(['route.destination', 'aircraft.type', 'airline']);
 
             if (! $locked->actual_departure_at) {
                 $locked->forceFill(['actual_departure_at' => $departureAt])->save();
@@ -234,23 +350,33 @@ class FlightSimulationService
         $distanceKm = (float) ($flight->route?->distance_km ?? data_get($flight->operational_data, 'distance_km', 0));
         $passengers = (int) $flight->passengers_booked;
         $businessModel = $flight->airline?->business_model ?? 'hybrid';
+        $cabinRevenue = [];
+        $revenueMinor = 0;
 
-        $fareMultiplier = match ($businessModel) {
-            'low_cost' => 0.82,
-            'full_service' => 1.18,
-            'regional' => 1.08,
-            'cargo' => 0.55,
-            default => 1.00,
-        };
+        foreach (['economy', 'business', 'first'] as $cabin) {
+            $booked = (int) data_get($flight->operational_data, 'commercial.cabins.'.$cabin.'.booked', 0);
+            $fareMinor = (int) data_get($flight->operational_data, 'commercial.cabins.'.$cabin.'.fare_minor', 0);
+            $cabinRevenue[$cabin] = $booked * $fareMinor;
+            $revenueMinor += $cabinRevenue[$cabin];
+        }
 
-        $averageFareMinor = (int) round((3500 + ($distanceKm * 11)) * $fareMultiplier);
-        $revenueMinor = $passengers * $averageFareMinor;
+        if ($revenueMinor <= 0 && $passengers > 0) {
+            $fareMultiplier = match ($businessModel) {
+                'low_cost' => 0.82,
+                'full_service' => 1.18,
+                'regional' => 1.08,
+                'cargo' => 0.55,
+                default => 1.00,
+            };
+            $fallbackAverageFareMinor = (int) round((3500 + ($distanceKm * 11)) * $fareMultiplier);
+            $revenueMinor = $passengers * $fallbackAverageFareMinor;
+        }
 
+        $averageFareMinor = $passengers > 0 ? (int) round($revenueMinor / $passengers) : 0;
         $blockHours = max(0.25, $flight->scheduled_departure_at->diffInMinutes($flight->scheduled_arrival_at) / 60);
         $burnPerHour = (float) data_get($flight->aircraft?->type?->technical_data, 'fuel_burn_l_per_hour', 2400);
         $fuelLiters = (int) round(($blockHours * $burnPerHour) + 250);
         $fuelCostMinor = $fuelLiters * (int) config('simulation.fuel_price_minor_per_liter', 88);
-
         $seats = max(1, (int) data_get($flight->aircraft?->configuration, 'seats', $flight->aircraft?->type?->typical_seats ?? 1));
         $operatingCostMinor = (int) round(150000 + ($seats * 350) + ($distanceKm * 60));
         $profitMinor = $revenueMinor - $fuelCostMinor - $operatingCostMinor;
@@ -259,6 +385,7 @@ class FlightSimulationService
             'passengers' => $passengers,
             'load_factor' => (float) data_get($flight->operational_data, 'load_factor', 0),
             'average_fare_minor' => $averageFareMinor,
+            'cabin_revenue_minor' => $cabinRevenue,
             'revenue_minor' => $revenueMinor,
             'fuel_liters' => $fuelLiters,
             'fuel_cost_minor' => $fuelCostMinor,
