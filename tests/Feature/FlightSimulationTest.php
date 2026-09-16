@@ -83,13 +83,21 @@ class FlightSimulationTest extends TestCase
         $boardingFlight = $flight->fresh();
         $this->assertSame('boarding', $boardingFlight->status);
         $this->assertGreaterThanOrEqual($earlyPassengers, $boardingFlight->passengers_booked);
+        $this->assertTrue((bool) data_get($boardingFlight->operational_data, 'operations.delay_evaluated'));
 
-        $simulation->tick(Carbon::parse($departure)->addMinutes(5));
+        $effectiveDeparture = $boardingFlight->scheduled_departure_at
+            ->copy()
+            ->addMinutes((int) $boardingFlight->delay_minutes);
+        $effectiveArrival = $boardingFlight->scheduled_arrival_at
+            ->copy()
+            ->addMinutes((int) $boardingFlight->delay_minutes);
+
+        $simulation->tick($effectiveDeparture->copy()->addMinutes(5));
         $this->assertSame('departed', $flight->fresh()->status);
         $this->assertSame('in_flight', $aircraft->fresh()->status);
         $this->assertNull($aircraft->fresh()->current_airport_id);
 
-        $simulation->tick($flight->scheduled_arrival_at->copy()->addMinute());
+        $simulation->tick($effectiveArrival->copy()->addMinute());
 
         $completedFlight = $flight->fresh();
         $completedAircraft = $aircraft->fresh();
@@ -117,7 +125,7 @@ class FlightSimulationTest extends TestCase
             ->where('idempotency_key', 'flight-completion:'.$flight->id)
             ->count();
 
-        $simulation->tick($flight->scheduled_arrival_at->copy()->addMinutes(10));
+        $simulation->tick($effectiveArrival->copy()->addMinutes(10));
 
         $this->assertSame($cyclesBeforeSecondTick, (int) $aircraft->fresh()->flight_cycles);
         $this->assertSame($flightTransactionsBeforeSecondTick, LedgerTransaction::query()
