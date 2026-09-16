@@ -3,6 +3,7 @@
 use App\Http\Controllers\AirlineController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GameController;
+use App\Http\Controllers\OperationsController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('guest')->group(function (): void {
@@ -23,4 +24,9 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/airline', [AirlineController::class, 'store'])->name('airlines.store');
 
     Route::get('/dashboard', [GameController::class, 'dashboard'])->name('dashboard');
+
+    Route::get('/operations', [OperationsController::class, 'index'])->name('operations.index');
+    Route::post('/operations/fleet/purchase', [OperationsController::class, 'purchaseAircraft'])->name('operations.fleet.purchase');
+    Route::post('/operations/routes', [OperationsController::class, 'storeRoute'])->name('operations.routes.store');
+    Route::post('/operations/flights', [OperationsController::class, 'scheduleFlight'])->name('operations.flights.store');
 });
