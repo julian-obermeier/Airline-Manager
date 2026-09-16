@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\World;
+use App\Services\Operations\FlightLocationGuardService;
 use App\Services\Operations\MaintenanceService;
 use App\Services\Operations\ProcurementService;
 use App\Services\Simulation\FlightSimulationService;
@@ -14,8 +15,11 @@ Artisan::command('airline:simulate', function (
     FlightSimulationService $simulation,
     MaintenanceService $maintenance,
     ProcurementService $procurement,
+    FlightLocationGuardService $locationGuard,
 ): void {
-    $summary = $simulation->tick();
+    $realNow = now();
+    $locationSummary = $locationGuard->guardBeforeTick($realNow);
+    $summary = $simulation->tick($realNow);
     $maintenanceSummary = ['maintenance_started' => 0, 'maintenance_completed' => 0, 'maintenance_grounded' => 0];
     $procurementSummary = ['deliveries' => 0, 'lease_payments' => 0, 'leases_ended' => 0];
 
@@ -36,7 +40,7 @@ Artisan::command('airline:simulate', function (
 
     $this->info('Simulation tick completed.');
     $this->table(
-        ['Worlds', 'Checked', 'Boarding', 'Departed', 'In air', 'Completed', 'Maintenance', 'Deliveries', 'Lease payments'],
+        ['Worlds', 'Checked', 'Boarding', 'Departed', 'In air', 'Completed', 'Location blocks', 'Maintenance', 'Deliveries', 'Lease payments'],
         [[
             $summary['worlds'],
             $summary['flights_checked'],
@@ -44,9 +48,10 @@ Artisan::command('airline:simulate', function (
             $summary['departed'],
             $summary['in_air'],
             $summary['completed'],
+            $locationSummary['cancelled_location'],
             $maintenanceSummary['maintenance_started'] + $maintenanceSummary['maintenance_completed'],
             $procurementSummary['deliveries'],
             $procurementSummary['lease_payments'],
         ]]
     );
-})->purpose('Advance world clocks and process flights, maintenance, deliveries and leasing');
+})->purpose('Advance world clocks and process flights, location integrity, maintenance, deliveries and leasing');
