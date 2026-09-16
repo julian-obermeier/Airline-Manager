@@ -90,14 +90,16 @@ class OperationalDelayPropagationTest extends TestCase
             ->orderBy('scheduled_departure_at')
             ->firstOrFail();
 
+        // A deliberately severe but permitted inbound delay makes the propagated
+        // turnaround constraint larger than any standalone random delay bucket.
         $outboundData = $outboundFlight->operational_data ?? [];
         $outboundData['operations'] = [
             'delay_evaluated' => true,
-            'final_delay_minutes' => 60,
+            'final_delay_minutes' => 240,
             'test_fixture' => true,
         ];
         $outboundFlight->forceFill([
-            'delay_minutes' => 60,
+            'delay_minutes' => 240,
             'operational_data' => $outboundData,
         ])->save();
 
@@ -108,7 +110,7 @@ class OperationalDelayPropagationTest extends TestCase
         $returnFlight->refresh();
 
         $this->assertTrue((bool) data_get($returnFlight->operational_data, 'operations.delay_evaluated'));
-        $this->assertGreaterThanOrEqual(50, (int) $returnFlight->delay_minutes);
+        $this->assertGreaterThanOrEqual(230, (int) $returnFlight->delay_minutes);
         $this->assertGreaterThan(0, (int) data_get($returnFlight->operational_data, 'operations.rotation_delay_minutes'));
     }
 }
