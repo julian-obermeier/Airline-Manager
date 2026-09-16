@@ -10,7 +10,7 @@ class GameBootstrapSeeder extends Seeder
 {
     public function run(): void
     {
-        World::query()->updateOrCreate(
+        World::query()->firstOrCreate(
             ['slug' => 'europa-1'],
             [
                 'name' => 'Europa 1',
