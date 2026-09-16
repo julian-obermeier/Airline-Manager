@@ -18,7 +18,7 @@ class FlightSimulationTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_flight_progresses_and_is_settled_exactly_once(): void
+    public function test_flight_progresses_books_cabins_and_is_settled_exactly_once(): void
     {
         $this->seed(GameBootstrapSeeder::class);
 
@@ -72,9 +72,17 @@ class FlightSimulationTest extends TestCase
         $flight = Flight::query()->where('flight_number', 'SA101')->firstOrFail();
         $simulation = app(FlightSimulationService::class);
 
+        $earlySummary = $simulation->tick(Carbon::parse($departure)->subHours(12));
+        $earlyFlight = $flight->fresh();
+        $this->assertGreaterThan(0, $earlyFlight->passengers_booked);
+        $this->assertGreaterThan(0, (int) data_get($earlyFlight->operational_data, 'commercial.cabins.economy.booked'));
+        $this->assertGreaterThan(0, $earlySummary['bookings_updated']);
+        $earlyPassengers = $earlyFlight->passengers_booked;
+
         $simulation->tick(Carbon::parse($departure)->subMinutes(20));
-        $this->assertSame('boarding', $flight->fresh()->status);
-        $this->assertGreaterThan(0, $flight->fresh()->passengers_booked);
+        $boardingFlight = $flight->fresh();
+        $this->assertSame('boarding', $boardingFlight->status);
+        $this->assertGreaterThanOrEqual($earlyPassengers, $boardingFlight->passengers_booked);
 
         $simulation->tick(Carbon::parse($departure)->addMinutes(5));
         $this->assertSame('departed', $flight->fresh()->status);
@@ -90,6 +98,8 @@ class FlightSimulationTest extends TestCase
         $this->assertNotNull($completedFlight->actual_departure_at);
         $this->assertNotNull($completedFlight->actual_arrival_at);
         $this->assertGreaterThan(0, (int) data_get($completedFlight->operational_data, 'economics.revenue_minor'));
+        $this->assertGreaterThan(0, (int) data_get($completedFlight->operational_data, 'economics.average_fare_minor'));
+        $this->assertGreaterThan(0, (int) data_get($completedFlight->operational_data, 'economics.cabin_revenue_minor.economy'));
         $this->assertNotNull(data_get($completedFlight->operational_data, 'economics.profit_minor'));
 
         $this->assertSame('available', $completedAircraft->status);
