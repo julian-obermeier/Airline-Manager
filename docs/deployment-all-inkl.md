@@ -21,46 +21,27 @@ Das Shared-Hosting-Profil benötigt keinen Redis-Server, keinen Queue-Worker und
 3. Für `airline.obermeier-it.de` PHP 8.3 oder neuer auswählen.
 4. SSH für den Hauptaccount aktivieren, falls im Tarif vorhanden.
 5. SSL/Let's Encrypt für die Subdomain aktivieren.
-6. Die Domain erst nach dem Upload auf das Unterverzeichnis `airline.obermeier-it.de/public` zeigen lassen.
+6. Die Domain auf das Unterverzeichnis `airline.obermeier-it.de/public` zeigen lassen.
 
-## 2. Empfohlene Deployment-Methode: GitHub-Artefakt
-
-Der CI-Workflow erzeugt nach erfolgreichem Test das Artefakt `airline-manager-all-inkl`.
-
-Dieses Paket enthält bereits:
-
-- PHP-Produktionsabhängigkeiten unter `vendor/`
-- gebaute Vue-/Vite-Assets unter `public/build/`
-- Laravel-Anwendung
-- Migrationen
-- Produktionsvorlage `.env.all-inkl.example`
-
-Node.js ist dadurch auf dem Webspace nicht erforderlich.
-
-### Paket entpacken
-
-Das heruntergeladene Archiv `airline-manager-all-inkl.tar.gz` in folgendes Verzeichnis übertragen:
-
-```text
-/www/htdocs/w021867a/airline.obermeier-it.de
-```
-
-Dann per SSH:
+## 2. Deployment aus `main`
 
 ```bash
 cd /www/htdocs/w021867a/airline.obermeier-it.de
-tar -xzf airline-manager-all-inkl.tar.gz
-rm airline-manager-all-inkl.tar.gz
+git pull origin main
+bash scripts/activate-all-inkl.sh
 ```
 
-## 3. Produktionsumgebung anlegen
+Beim ersten Setup kann das Repository direkt in das leere Zielverzeichnis geklont werden. Die produktive `.env` bleibt bei späteren Updates erhalten.
+
+## 3. Produktionsumgebung
+
+Falls noch keine `.env` vorhanden ist:
 
 ```bash
-cd /www/htdocs/w021867a/airline.obermeier-it.de
 cp .env.all-inkl.example .env
 ```
 
-Anschließend `.env` bearbeiten und mindestens diese Werte ersetzen:
+Anschließend mindestens diese Werte setzen:
 
 ```env
 APP_URL=https://airline.obermeier-it.de
@@ -75,20 +56,21 @@ Die Datei `.env` darf niemals öffentlich oder in Git eingecheckt werden.
 
 ## 4. Laravel aktivieren
 
-Das Repository enthält für dieses Zielsystem ein Aktivierungsskript. Es erstellt die benötigten Runtime-Verzeichnisse, erzeugt bei Bedarf den Application Key, führt Migrationen aus und baut die Laravel-Caches.
-
 ```bash
-cd /www/htdocs/w021867a/airline.obermeier-it.de
 bash scripts/activate-all-inkl.sh
 ```
 
-Das Skript verwendet standardmäßig:
+Das Skript:
 
-```text
-/usr/bin/php83
-```
+- installiert fehlende Composer-Produktionsabhängigkeiten,
+- erzeugt bei Bedarf den Application Key,
+- erzeugt bei Bedarf einen 64-stelligen Simulation-Cron-Token,
+- führt Migrationen aus,
+- aktualisiert die Spielstammdaten,
+- baut Laravel-Caches,
+- gibt am Ende die geschützte Cron-URL aus.
 
-Falls auf dem Account ein anderer PHP-CLI-Pfad erforderlich ist:
+Standardmäßig wird `/usr/bin/php83` verwendet. Bei Bedarf:
 
 ```bash
 PHP_BIN=/usr/bin/php84 bash scripts/activate-all-inkl.sh
@@ -96,9 +78,7 @@ PHP_BIN=/usr/bin/php84 bash scripts/activate-all-inkl.sh
 
 ## 5. Domain auf `public/` stellen
 
-Im KAS die Subdomain `airline.obermeier-it.de` bearbeiten.
-
-Das Webspace-Ziel muss auf das Laravel-Public-Verzeichnis zeigen:
+Im KAS muss `airline.obermeier-it.de` auf folgendes Webspace-Ziel zeigen:
 
 ```text
 /airline.obermeier-it.de/public
@@ -107,8 +87,6 @@ Das Webspace-Ziel muss auf das Laravel-Public-Verzeichnis zeigen:
 Das Projektstammverzeichnis darf **nicht** direkt öffentlich ausgeliefert werden.
 
 ## 6. Funktion prüfen
-
-Nach Aktivierung von SSL und Document Root prüfen:
 
 ```text
 https://airline.obermeier-it.de/up
@@ -120,30 +98,58 @@ Erwartung:
 
 - `/up`: Laravel Health Check erfolgreich
 - `/api/v1/health`: JSON-Systemstatus
-- `/`: Vue-Oberfläche / Command Center
+- `/`: Login bzw. Airline-Command-Center
 
-## 7. Spätere Updates
+## 7. Simulation-Cron aktivieren
+
+Airline Empire verwendet auf Shared Hosting keinen dauerhaften Worker. Die Simulation Engine wird über einen kurzen, idempotenten HTTP-Cron-Tick ausgeführt.
+
+Nach `bash scripts/activate-all-inkl.sh` wird eine URL dieser Form ausgegeben:
+
+```text
+https://airline.obermeier-it.de/system/cron/simulate?token=DEIN_GENERIERTER_TOKEN
+```
+
+Im ALL-INKL KAS unter **Tools → Cronjobs** einen neuen Cronjob anlegen und genau diese URL als Protokoll/Pfad eintragen. Als Ausführungsintervall werden für den aktuellen Stand **5 Minuten** empfohlen.
+
+Der Endpoint ist ohne den in `.env` gespeicherten `SIMULATION_CRON_TOKEN` nicht aufrufbar. Der Token darf nicht veröffentlicht oder in Git eingecheckt werden.
+
+Die Simulation verarbeitet pro Tick unter anderem:
+
+- Weltzeit und Weltgeschwindigkeit,
+- Boarding,
+- Abflug,
+- Reiseflug,
+- Landung,
+- Passagierauslastung,
+- Flugumsätze,
+- Treibstoffkosten,
+- operative Kosten,
+- Flugzeugposition,
+- Flugstunden und Flugzyklen,
+- technischen Zustandsverschleiß.
+
+Der Flugabschluss ist idempotent: wiederholte Cron-Aufrufe erzeugen keine doppelten Ledger-Buchungen.
+
+## 8. Manuelle Simulation per SSH
+
+Für Tests kann ein Tick auch direkt ausgeführt werden:
+
+```bash
+/usr/bin/php83 artisan airline:simulate
+```
+
+## 9. Spätere Updates
 
 Bei jedem neuen Release:
 
-1. Datenbank sichern.
-2. Neues CI-Deployment-Artefakt einspielen.
-3. Bestehende `.env` behalten.
-4. Danach erneut ausführen:
-
 ```bash
+cd /www/htdocs/w021867a/airline.obermeier-it.de
+git pull origin main
 bash scripts/activate-all-inkl.sh
 ```
 
-Benutzerdaten in `storage/` und die produktive `.env` dürfen beim Update nicht überschrieben oder gelöscht werden.
-
-## 8. Scheduler für spätere Simulationen
-
-Sobald zeitgesteuerte Simulationen benötigt werden, wird auf ALL-INKL **kein** dauerhafter `schedule:work`-Prozess gestartet.
-
-ALL-INKL-Cronjobs werden im KAS eingerichtet und müssen dort über eine HTTP(S)-aufrufbare Datei bzw. das von ALL-INKL dokumentierte Shellskript-Verfahren gestartet werden. Deshalb wird vor Einführung der Simulation Engine ein eigener geschützter Scheduler-Wrapper umgesetzt.
-
-Die späteren Simulationsjobs müssen kurzlaufend, idempotent und cron-tauglich sein.
+Die bestehende `.env` und produktive Benutzerdaten bleiben erhalten.
 
 ## Nicht auf Shared Hosting starten
 
