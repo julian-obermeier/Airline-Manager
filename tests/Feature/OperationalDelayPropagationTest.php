@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\AircraftProcurement;
 use App\Models\AircraftType;
 use App\Models\Airline;
 use App\Models\Airport;
 use App\Models\Flight;
 use App\Models\FlightSchedule;
 use App\Models\World;
+use App\Services\Operations\ProcurementService;
 use App\Services\Simulation\FlightSimulationService;
 use Database\Seeders\GameBootstrapSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -51,7 +53,11 @@ class OperationalDelayPropagationTest extends TestCase
         $this->post(route('operations.fleet.purchase'), [
             'aircraft_type_id' => $type->id,
             'registration' => 'D-ADLY',
-        ])->assertRedirect(route('operations.index'));
+        ])->assertRedirect('/fleet-market');
+
+        $procurement = AircraftProcurement::query()->where('registration', 'D-ADLY')->firstOrFail();
+        app(ProcurementService::class)->processWorld($world, $procurement->delivery_due_at->copy()->addMinute());
+
         $this->post(route('operations.routes.store'), [
             'origin_airport_id' => $frankfurt->id,
             'destination_airport_id' => $london->id,
@@ -90,8 +96,6 @@ class OperationalDelayPropagationTest extends TestCase
             ->orderBy('scheduled_departure_at')
             ->firstOrFail();
 
-        // A deliberately severe but permitted inbound delay makes the propagated
-        // turnaround constraint larger than any standalone random delay bucket.
         $outboundData = $outboundFlight->operational_data ?? [];
         $outboundData['operations'] = [
             'delay_evaluated' => true,
