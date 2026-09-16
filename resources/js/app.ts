@@ -1,5 +1,3 @@
-import '../css/app.css';
-
 import axios from 'axios';
 import { createPinia } from 'pinia';
 import { createApp } from 'vue';
