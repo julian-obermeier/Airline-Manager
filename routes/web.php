@@ -4,7 +4,12 @@ use App\Http\Controllers\AirlineController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\OperationsController;
+use App\Http\Controllers\SimulationController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/system/cron/simulate', SimulationController::class)
+    ->middleware('throttle:12,1')
+    ->name('simulation.tick');
 
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
