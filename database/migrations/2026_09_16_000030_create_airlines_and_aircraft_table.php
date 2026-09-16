@@ -25,8 +25,8 @@ return new class extends Migration
             $table->string('target_group', 40)->nullable();
             $table->bigInteger('starting_capital_minor');
             $table->string('status', 32)->default('active');
-            $table->jsonb('branding')->nullable();
-            $table->timestampsTz();
+            $table->json('branding')->nullable();
+            $table->timestamps();
 
             $table->unique(['world_id', 'slug']);
             $table->unique(['world_id', 'icao_code']);
@@ -51,9 +51,9 @@ return new class extends Migration
             $table->string('ownership_type', 32)->default('owned');
             $table->bigInteger('acquisition_price_minor')->nullable();
             $table->char('currency', 3)->default('EUR');
-            $table->jsonb('configuration')->nullable();
-            $table->jsonb('metadata')->nullable();
-            $table->timestampsTz();
+            $table->json('configuration')->nullable();
+            $table->json('metadata')->nullable();
+            $table->timestamps();
 
             $table->unique(['world_id', 'registration']);
             $table->index(['world_id', 'airline_id', 'status']);
