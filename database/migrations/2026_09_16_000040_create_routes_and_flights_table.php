@@ -17,8 +17,8 @@ return new class extends Migration
             $table->decimal('distance_km', 10, 2);
             $table->unsignedInteger('planned_block_minutes');
             $table->string('status', 32)->default('active');
-            $table->jsonb('settings')->nullable();
-            $table->timestampsTz();
+            $table->json('settings')->nullable();
+            $table->timestamps();
 
             $table->unique(['airline_id', 'origin_airport_id', 'destination_airport_id']);
             $table->index(['world_id', 'origin_airport_id', 'destination_airport_id']);
@@ -31,16 +31,16 @@ return new class extends Migration
             $table->foreignUlid('route_id')->constrained('routes')->cascadeOnDelete();
             $table->foreignUlid('aircraft_id')->nullable()->constrained('aircraft')->nullOnDelete();
             $table->string('flight_number', 12);
-            $table->timestampTz('scheduled_departure_at');
-            $table->timestampTz('scheduled_arrival_at');
-            $table->timestampTz('actual_departure_at')->nullable();
-            $table->timestampTz('actual_arrival_at')->nullable();
+            $table->timestamp('scheduled_departure_at');
+            $table->timestamp('scheduled_arrival_at');
+            $table->timestamp('actual_departure_at')->nullable();
+            $table->timestamp('actual_arrival_at')->nullable();
             $table->string('status', 32)->default('scheduled');
             $table->integer('delay_minutes')->default(0);
             $table->unsignedInteger('passengers_booked')->default(0);
             $table->unsignedInteger('cargo_kg_booked')->default(0);
-            $table->jsonb('operational_data')->nullable();
-            $table->timestampsTz();
+            $table->json('operational_data')->nullable();
+            $table->timestamps();
 
             $table->unique(['world_id', 'flight_number', 'scheduled_departure_at']);
             $table->index(['world_id', 'status', 'scheduled_departure_at']);
