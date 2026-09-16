@@ -48,10 +48,16 @@ class FlightScheduleService
             ->where('status', 'active')
             ->orderBy('id')
             ->each(function (FlightSchedule $schedule) use ($simulationNow, &$summary): void {
-                $result = $this->generate($schedule, $simulationNow);
                 $summary['schedules']++;
-                $summary['flights_created'] += $result['flights_created'];
-                $summary['rotations_skipped'] += $result['rotations_skipped'];
+
+                try {
+                    $result = $this->generate($schedule, $simulationNow);
+                    $summary['flights_created'] += $result['flights_created'];
+                    $summary['rotations_skipped'] += $result['rotations_skipped'];
+                } catch (\Throwable $exception) {
+                    report($exception);
+                    $summary['rotations_skipped']++;
+                }
             });
 
         return $summary;
@@ -75,14 +81,26 @@ class FlightScheduleService
         $this->assertRotationIntegrity($schedule);
 
         $horizonDays = max(7, min(90, (int) $schedule->generation_horizon_days));
-        $start = $from->copy()->startOfDay();
-        $scheduleStart = $schedule->starts_on->copy()->startOfDay();
+        $until = $from->copy()->startOfDay()->addDays($horizonDays);
 
+        if ($schedule->last_generated_on
+            && $schedule->last_generated_on->copy()->startOfDay()->greaterThanOrEqualTo($until)) {
+            return ['flights_created' => 0, 'rotations_skipped' => 0];
+        }
+
+        $start = $from->copy()->startOfDay();
+        if ($schedule->last_generated_on) {
+            $nextUngeneratedDay = $schedule->last_generated_on->copy()->startOfDay()->addDay();
+            if ($nextUngeneratedDay->greaterThan($start)) {
+                $start = $nextUngeneratedDay;
+            }
+        }
+
+        $scheduleStart = $schedule->starts_on->copy()->startOfDay();
         if ($scheduleStart->greaterThan($start)) {
             $start = $scheduleStart;
         }
 
-        $until = $from->copy()->startOfDay()->addDays($horizonDays);
         $days = array_values(array_unique(array_map('intval', $schedule->days_of_week ?? [])));
         $flightsCreated = 0;
         $rotationsSkipped = 0;
@@ -181,12 +199,31 @@ class FlightScheduleService
             return ['flights_created' => 0, 'skipped' => false];
         }
 
+        $excludedIds = $existing->pluck('id')->all();
+        $flightNumberConflict = Flight::query()
+            ->where('world_id', $schedule->world_id)
+            ->when($excludedIds !== [], fn ($query) => $query->whereNotIn('id', $excludedIds))
+            ->where(function ($query) use ($schedule, $outboundDeparture, $returnDeparture): void {
+                $query->where(function ($query) use ($schedule, $outboundDeparture): void {
+                    $query->where('flight_number', $schedule->outbound_flight_number)
+                        ->where('scheduled_departure_at', $outboundDeparture);
+                })->orWhere(function ($query) use ($schedule, $returnDeparture): void {
+                    $query->where('flight_number', $schedule->return_flight_number)
+                        ->where('scheduled_departure_at', $returnDeparture);
+                });
+            })
+            ->exists();
+
+        if ($flightNumberConflict) {
+            return ['flights_created' => 0, 'skipped' => true];
+        }
+
         if (! $this->rotationWindowIsAvailable(
             $schedule,
             $outboundDeparture,
             $returnArrival,
             $minimumTurnaround,
-            $existing->pluck('id')->all()
+            $excludedIds
         )) {
             return ['flights_created' => 0, 'skipped' => true];
         }
