@@ -16,7 +16,7 @@ import { RouterLink, RouterView } from 'vue-router';
             <nav class="nav" aria-label="Hauptnavigation">
                 <RouterLink class="nav-link" to="/">
                     <span class="nav-icon">⌂</span>
-                    Dashboard
+                    <span class="nav-label">Dashboard</span>
                 </RouterLink>
             </nav>
 
