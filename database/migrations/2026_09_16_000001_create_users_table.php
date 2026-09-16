@@ -13,7 +13,7 @@ return new class extends Migration
             $table->string('name', 120);
             $table->string('username', 60)->unique();
             $table->string('email')->unique();
-            $table->timestampTz('email_verified_at')->nullable();
+            $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->char('country_code', 2)->nullable();
             $table->string('locale', 10)->default('de');
@@ -21,16 +21,16 @@ return new class extends Migration
             $table->string('avatar_path')->nullable();
             $table->unsignedInteger('account_level')->default(1);
             $table->string('security_status', 32)->default('normal');
-            $table->jsonb('notification_settings')->nullable();
-            $table->jsonb('privacy_settings')->nullable();
+            $table->json('notification_settings')->nullable();
+            $table->json('privacy_settings')->nullable();
             $table->rememberToken();
-            $table->timestampsTz();
+            $table->timestamps();
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table): void {
             $table->string('email')->primary();
             $table->string('token');
-            $table->timestampTz('created_at')->nullable();
+            $table->timestamp('created_at')->nullable();
         });
 
         Schema::create('personal_access_tokens', function (Blueprint $table): void {
@@ -39,9 +39,9 @@ return new class extends Migration
             $table->string('name');
             $table->string('token', 64)->unique();
             $table->text('abilities')->nullable();
-            $table->timestampTz('last_used_at')->nullable();
-            $table->timestampTz('expires_at')->nullable()->index();
-            $table->timestampsTz();
+            $table->timestamp('last_used_at')->nullable();
+            $table->timestamp('expires_at')->nullable()->index();
+            $table->timestamps();
         });
     }
 
