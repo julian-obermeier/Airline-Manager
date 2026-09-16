@@ -17,7 +17,7 @@ return new class extends Migration
             $table->string('type', 24);
             $table->char('currency', 3);
             $table->boolean('is_system')->default(false);
-            $table->timestampsTz();
+            $table->timestamps();
             $table->unique(['airline_id', 'code']);
         });
 
@@ -29,10 +29,10 @@ return new class extends Migration
             $table->string('reference_type', 80)->nullable();
             $table->string('reference_id', 64)->nullable();
             $table->string('description', 255);
-            $table->timestampTz('occurred_at');
-            $table->timestampTz('posted_at');
-            $table->jsonb('metadata')->nullable();
-            $table->timestampsTz();
+            $table->timestamp('occurred_at');
+            $table->timestamp('posted_at');
+            $table->json('metadata')->nullable();
+            $table->timestamps();
             $table->unique(['world_id', 'idempotency_key']);
             $table->index(['airline_id', 'occurred_at']);
         });
@@ -43,7 +43,7 @@ return new class extends Migration
             $table->foreignUlid('ledger_account_id')->constrained('ledger_accounts')->restrictOnDelete();
             $table->bigInteger('amount_minor');
             $table->string('memo', 255)->nullable();
-            $table->timestampsTz();
+            $table->timestamps();
             $table->index(['ledger_account_id', 'created_at']);
         });
     }
