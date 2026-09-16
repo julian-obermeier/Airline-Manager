@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\AircraftProcurement;
 use App\Models\AircraftType;
 use App\Models\Airline;
 use App\Models\Airport;
 use App\Models\Flight;
 use App\Models\World;
+use App\Services\Operations\ProcurementService;
 use Database\Seeders\GameBootstrapSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -15,7 +17,7 @@ class OperationsWorkflowTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_airline_can_buy_aircraft_create_route_price_it_and_schedule_flight(): void
+    public function test_airline_can_order_aircraft_receive_it_create_route_price_it_and_schedule_flight(): void
     {
         $this->seed(GameBootstrapSeeder::class);
 
@@ -50,18 +52,22 @@ class OperationsWorkflowTest extends TestCase
         $this->post(route('operations.fleet.purchase'), [
             'aircraft_type_id' => $type->id,
             'registration' => 'D-AOPS',
-        ])->assertRedirect('/operations');
+        ])->assertRedirect('/fleet-market');
+
+        $procurement = AircraftProcurement::query()->where('registration', 'D-AOPS')->firstOrFail();
+        $this->assertSame('ordered', $procurement->status);
+        $this->assertDatabaseMissing('aircraft', ['registration' => 'D-AOPS']);
+        $this->assertDatabaseHas('ledger_accounts', ['airline_id' => $airline->id, 'code' => 'AIRCRAFT_PREPAYMENTS']);
+
+        app(ProcurementService::class)->processWorld($world, $procurement->delivery_due_at->copy()->addMinute());
 
         $this->assertDatabaseHas('aircraft', [
             'airline_id' => $airline->id,
             'registration' => 'D-AOPS',
             'aircraft_type_id' => $type->id,
+            'ownership_type' => 'owned',
         ]);
-        $this->assertDatabaseHas('ledger_accounts', [
-            'airline_id' => $airline->id,
-            'code' => 'FLEET',
-        ]);
-        $this->assertDatabaseCount('ledger_entries', 4);
+        $this->assertDatabaseHas('ledger_accounts', ['airline_id' => $airline->id, 'code' => 'FLEET']);
 
         $aircraft = $airline->aircraft()->firstOrFail();
         $this->assertGreaterThan(0, (int) data_get($aircraft->configuration, 'cabins.economy'));
