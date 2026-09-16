@@ -9,6 +9,7 @@ use App\Http\Controllers\GameController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\OperationsController;
 use App\Http\Controllers\SimulationController;
+use App\Http\Controllers\WorldMapController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/system/cron/simulate', SimulationController::class)
@@ -54,4 +55,5 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('/maintenance/{event}/cancel', [MaintenanceController::class, 'cancel'])->name('maintenance.cancel');
 
     Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
+    Route::get('/map', [WorldMapController::class, 'index'])->name('map.index');
 });
