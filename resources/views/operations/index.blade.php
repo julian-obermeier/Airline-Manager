@@ -23,9 +23,15 @@
         <small>Aktive Strecken</small>
     </article>
     <article class="card metric">
-        <span class="eyebrow">FLUGPLAN</span>
-        <strong>{{ $flights->count() }}</strong>
-        <small>Geladene Fluginstanzen</small>
+        <span class="eyebrow">SIMULATION</span>
+        <strong>{{ $world->last_simulation_tick_at ? 'Aktiv' : 'Bereit' }}</strong>
+        <small>
+            @if($world->last_simulation_tick_at)
+                Letzter Tick {{ $world->last_simulation_tick_at->timezone('Europe/Berlin')->format('d.m. H:i') }}
+            @else
+                Cronjob noch nicht ausgeführt
+            @endif
+        </small>
     </article>
 </section>
 
@@ -173,16 +179,18 @@
     @else
         <div class="table-wrap">
             <table class="data-table">
-                <thead><tr><th>Kennzeichen</th><th>Muster</th><th>Standort</th><th>Reichweite</th><th>Zustand</th><th>Status</th></tr></thead>
+                <thead><tr><th>Kennzeichen</th><th>Muster</th><th>Standort</th><th>Flugstunden</th><th>Zyklen</th><th>Zustand</th><th>Status</th></tr></thead>
                 <tbody>
                 @foreach($fleet as $aircraft)
+                    @php($aircraftStatus = match($aircraft->status) {'available' => 'Verfügbar', 'in_flight' => 'Im Flug', default => ucfirst(str_replace('_', ' ', $aircraft->status))})
                     <tr>
                         <td><strong>{{ $aircraft->registration }}</strong></td>
                         <td>{{ $aircraft->type->manufacturer }} {{ $aircraft->type->model }}</td>
-                        <td>{{ $aircraft->currentAirport?->iata_code ?? '–' }}</td>
-                        <td>{{ $aircraft->type->range_km ? number_format($aircraft->type->range_km, 0, ',', '.').' km' : '–' }}</td>
+                        <td>{{ $aircraft->currentAirport?->iata_code ?? ($aircraft->status === 'in_flight' ? 'Unterwegs' : '–') }}</td>
+                        <td>{{ number_format((float) $aircraft->flight_hours, 2, ',', '.') }} h</td>
+                        <td>{{ number_format((int) $aircraft->flight_cycles, 0, ',', '.') }}</td>
                         <td>{{ number_format((float) $aircraft->condition_percent, 1, ',', '.') }} %</td>
-                        <td><span class="badge">{{ $aircraft->status }}</span></td>
+                        <td><span class="badge">{{ $aircraftStatus }}</span></td>
                     </tr>
                 @endforeach
                 </tbody>
@@ -213,7 +221,7 @@
                         <td>{{ number_format((float) $route->distance_km, 0, ',', '.') }} km</td>
                         <td>{{ intdiv($route->planned_block_minutes, 60) }}h {{ $route->planned_block_minutes % 60 }}m</td>
                         <td>{{ $route->flights_count }}</td>
-                        <td><span class="badge">{{ $route->status }}</span></td>
+                        <td><span class="badge">{{ $route->status === 'active' ? 'Aktiv' : $route->status }}</span></td>
                     </tr>
                 @endforeach
                 </tbody>
@@ -225,10 +233,10 @@
 <section class="card" style="margin-top:18px">
     <div class="section-title">
         <div>
-            <span class="eyebrow">SCHEDULE</span>
-            <h3>Flugplan</h3>
+            <span class="eyebrow">LIVE SCHEDULE</span>
+            <h3>Flugplan & Simulation</h3>
         </div>
-        <span class="badge">Nächste {{ $flights->count() }}</span>
+        <span class="badge">{{ $flights->count() }} Flüge</span>
     </div>
 
     @if($flights->isEmpty())
@@ -236,16 +244,36 @@
     @else
         <div class="table-wrap">
             <table class="data-table">
-                <thead><tr><th>Flug</th><th>Route</th><th>Flugzeug</th><th>Abflug</th><th>Ankunft</th><th>Status</th></tr></thead>
+                <thead><tr><th>Flug</th><th>Route</th><th>Flugzeug</th><th>Abflug</th><th>Ankunft</th><th>PAX</th><th>Ergebnis</th><th>Status</th></tr></thead>
                 <tbody>
                 @foreach($flights as $flight)
+                    @php
+                        $flightStatus = match($flight->status) {
+                            'scheduled' => 'Geplant',
+                            'boarding' => 'Boarding',
+                            'departed' => 'Abgeflogen',
+                            'in_air' => 'Unterwegs',
+                            'completed' => 'Gelandet',
+                            'cancelled' => 'Annulliert',
+                            default => ucfirst(str_replace('_', ' ', $flight->status)),
+                        };
+                        $profitMinor = data_get($flight->operational_data, 'economics.profit_minor');
+                    @endphp
                     <tr>
                         <td><strong>{{ $flight->flight_number }}</strong></td>
                         <td>{{ $flight->route->origin->iata_code }} → {{ $flight->route->destination->iata_code }}</td>
                         <td>{{ $flight->aircraft?->registration ?? '–' }}</td>
                         <td>{{ $flight->scheduled_departure_at->timezone('Europe/Berlin')->format('d.m.Y H:i') }}</td>
                         <td>{{ $flight->scheduled_arrival_at->timezone('Europe/Berlin')->format('d.m.Y H:i') }}</td>
-                        <td><span class="badge">{{ $flight->status }}</span></td>
+                        <td>{{ $flight->passengers_booked > 0 ? $flight->passengers_booked : '–' }}</td>
+                        <td>
+                            @if($profitMinor !== null)
+                                <strong class="{{ $profitMinor >= 0 ? 'kpi-positive' : '' }}">{{ number_format($profitMinor / 100, 2, ',', '.') }} {{ $airline->base_currency }}</strong>
+                            @else
+                                <span class="muted">–</span>
+                            @endif
+                        </td>
+                        <td><span class="badge">{{ $flightStatus }}</span></td>
                     </tr>
                 @endforeach
                 </tbody>
@@ -254,5 +282,5 @@
     @endif
 </section>
 
-<p class="footer-note">Flugzeugkäufe sind echte Ledger-Buchungen. Routen und Flüge werden ausschließlich innerhalb deiner aktiven Spielwelt und Airline angelegt.</p>
+<p class="footer-note">Die Simulation Engine verarbeitet Boarding, Abflug, Reiseflug und Landung automatisch. Bei der Landung werden Passagierumsatz, Treibstoff und operative Kosten idempotent im Ledger verbucht und das Flugzeug am Zielflughafen verfügbar gemacht.</p>
 @endsection
