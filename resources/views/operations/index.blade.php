@@ -182,7 +182,6 @@
                 <thead><tr><th>Kennzeichen</th><th>Muster</th><th>Standort</th><th>Flugstunden</th><th>Zyklen</th><th>Zustand</th><th>Status</th></tr></thead>
                 <tbody>
                 @foreach($fleet as $aircraft)
-                    @php($aircraftStatus = match($aircraft->status) {'available' => 'Verfügbar', 'in_flight' => 'Im Flug', default => ucfirst(str_replace('_', ' ', $aircraft->status))})
                     <tr>
                         <td><strong>{{ $aircraft->registration }}</strong></td>
                         <td>{{ $aircraft->type->manufacturer }} {{ $aircraft->type->model }}</td>
@@ -190,7 +189,7 @@
                         <td>{{ number_format((float) $aircraft->flight_hours, 2, ',', '.') }} h</td>
                         <td>{{ number_format((int) $aircraft->flight_cycles, 0, ',', '.') }}</td>
                         <td>{{ number_format((float) $aircraft->condition_percent, 1, ',', '.') }} %</td>
-                        <td><span class="badge">{{ $aircraftStatus }}</span></td>
+                        <td><span class="badge">@switch($aircraft->status)@case('available')Verfügbar@break @case('in_flight')Im Flug@break @default{{ ucfirst(str_replace('_', ' ', $aircraft->status)) }}@endswitch</span></td>
                     </tr>
                 @endforeach
                 </tbody>
@@ -247,18 +246,6 @@
                 <thead><tr><th>Flug</th><th>Route</th><th>Flugzeug</th><th>Abflug</th><th>Ankunft</th><th>PAX</th><th>Ergebnis</th><th>Status</th></tr></thead>
                 <tbody>
                 @foreach($flights as $flight)
-                    @php
-                        $flightStatus = match($flight->status) {
-                            'scheduled' => 'Geplant',
-                            'boarding' => 'Boarding',
-                            'departed' => 'Abgeflogen',
-                            'in_air' => 'Unterwegs',
-                            'completed' => 'Gelandet',
-                            'cancelled' => 'Annulliert',
-                            default => ucfirst(str_replace('_', ' ', $flight->status)),
-                        };
-                        $profitMinor = data_get($flight->operational_data, 'economics.profit_minor');
-                    @endphp
                     <tr>
                         <td><strong>{{ $flight->flight_number }}</strong></td>
                         <td>{{ $flight->route->origin->iata_code }} → {{ $flight->route->destination->iata_code }}</td>
@@ -267,13 +254,13 @@
                         <td>{{ $flight->scheduled_arrival_at->timezone('Europe/Berlin')->format('d.m.Y H:i') }}</td>
                         <td>{{ $flight->passengers_booked > 0 ? $flight->passengers_booked : '–' }}</td>
                         <td>
-                            @if($profitMinor !== null)
-                                <strong class="{{ $profitMinor >= 0 ? 'kpi-positive' : '' }}">{{ number_format($profitMinor / 100, 2, ',', '.') }} {{ $airline->base_currency }}</strong>
+                            @if(data_get($flight->operational_data, 'economics.profit_minor') !== null)
+                                <strong class="{{ data_get($flight->operational_data, 'economics.profit_minor') >= 0 ? 'kpi-positive' : '' }}">{{ number_format(data_get($flight->operational_data, 'economics.profit_minor') / 100, 2, ',', '.') }} {{ $airline->base_currency }}</strong>
                             @else
                                 <span class="muted">–</span>
                             @endif
                         </td>
-                        <td><span class="badge">{{ $flightStatus }}</span></td>
+                        <td><span class="badge">@switch($flight->status)@case('scheduled')Geplant@break @case('boarding')Boarding@break @case('departed')Abgeflogen@break @case('in_air')Unterwegs@break @case('completed')Gelandet@break @case('cancelled')Annulliert@break @default{{ ucfirst(str_replace('_', ' ', $flight->status)) }}@endswitch</span></td>
                     </tr>
                 @endforeach
                 </tbody>
