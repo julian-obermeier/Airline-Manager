@@ -32,8 +32,8 @@ if [[ ! -f vendor/autoload.php ]]; then
         --no-progress
 fi
 
-if [[ ! -f public/build/assets/app-Cdklvegz.css ]]; then
-    echo "FEHLER: Das statische Produktions-CSS fehlt. Führe zuerst 'git pull origin main' aus." >&2
+if [[ ! -f public/assets/airline-empire.css ]]; then
+    echo "FEHLER: Das Produktions-CSS fehlt. Führe zuerst 'git pull origin main' aus." >&2
     exit 1
 fi
 
@@ -52,11 +52,13 @@ fi
 
 "$PHP_BIN" artisan optimize:clear
 "$PHP_BIN" artisan migrate --force
+"$PHP_BIN" artisan db:seed --force
 "$PHP_BIN" artisan config:cache
 "$PHP_BIN" artisan route:cache
 "$PHP_BIN" artisan view:cache
 
 printf '\nAirline Empire wurde für ALL-INKL aktiviert.\n'
 printf 'Website: https://airline.obermeier-it.de\n'
+printf 'Login:   https://airline.obermeier-it.de/login\n'
 printf 'Health:  https://airline.obermeier-it.de/up\n'
 printf 'API:     https://airline.obermeier-it.de/api/v1/health\n'
