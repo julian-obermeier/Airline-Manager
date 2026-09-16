@@ -6,6 +6,23 @@
 @section('subheading', $airline->name.' · '.$world->name)
 
 @section('content')
+@php
+    $aircraftStatusLabels = [
+        'available' => 'Verfügbar',
+        'in_flight' => 'Im Flug',
+        'maintenance' => 'Wartung',
+        'grounded' => 'Gesperrt',
+    ];
+    $flightStatusLabels = [
+        'scheduled' => 'Geplant',
+        'boarding' => 'Boarding',
+        'departed' => 'Abgeflogen',
+        'in_air' => 'Unterwegs',
+        'completed' => 'Gelandet',
+        'cancelled' => 'Annulliert',
+    ];
+@endphp
+
 <section class="grid grid-4">
     <article class="card metric">
         <span class="eyebrow">LIQUIDITÄT</span>
@@ -60,7 +77,7 @@
                             </option>
                         @endforeach
                     </select>
-                    <span class="help">Der Kaufpreis wird sofort aus dem Bankguthaben bezahlt und im Ledger verbucht.</span>
+                    <span class="help">Neue Flugzeuge erhalten automatisch eine zum Geschäftsmodell passende Economy-/Business-/First-Konfiguration.</span>
                 </div>
                 <div class="field full">
                     <label for="registration">Kennzeichen <span class="muted">(optional)</span></label>
@@ -79,7 +96,7 @@
                 <span class="eyebrow">NETWORK</span>
                 <h3>Route anlegen</h3>
             </div>
-            <span class="badge">Great Circle</span>
+            <span class="badge">Revenue-ready</span>
         </div>
 
         <form method="post" action="{{ route('operations.routes.store') }}" class="form-grid">
@@ -105,7 +122,7 @@
                         </option>
                     @endforeach
                 </select>
-                <span class="help">Distanz und geplante Blockzeit werden automatisch berechnet.</span>
+                <span class="help">Distanz, Blockzeit, Standardtarife und Marktnachfrage werden automatisch berechnet.</span>
             </div>
             <div class="field full">
                 <button class="button primary" type="submit">Route anlegen</button>
@@ -120,7 +137,7 @@
             <span class="eyebrow">FLIGHT SCHEDULING</span>
             <h3>Konkreten Flug planen</h3>
         </div>
-        <span class="badge">Serverseitig validiert</span>
+        <span class="badge">Tarife werden eingefroren</span>
     </div>
 
     @if($routes->isEmpty() || $fleet->isEmpty())
@@ -189,7 +206,7 @@
                         <td>{{ number_format((float) $aircraft->flight_hours, 2, ',', '.') }} h</td>
                         <td>{{ number_format((int) $aircraft->flight_cycles, 0, ',', '.') }}</td>
                         <td>{{ number_format((float) $aircraft->condition_percent, 1, ',', '.') }} %</td>
-                        <td><span class="badge">@switch($aircraft->status)@case('available')Verfügbar@break @case('in_flight')Im Flug@break @default{{ ucfirst(str_replace('_', ' ', $aircraft->status)) }}@endswitch</span></td>
+                        <td><span class="badge">{{ $aircraftStatusLabels[$aircraft->status] ?? ucfirst(str_replace('_', ' ', $aircraft->status)) }}</span></td>
                     </tr>
                 @endforeach
                 </tbody>
@@ -201,8 +218,8 @@
 <section class="card" style="margin-top:18px">
     <div class="section-title">
         <div>
-            <span class="eyebrow">NETWORK</span>
-            <h3>Streckennetz</h3>
+            <span class="eyebrow">REVENUE MANAGEMENT</span>
+            <h3>Streckennetz & Ticketpreise</h3>
         </div>
         <span class="badge">{{ $routes->count() }} Routen</span>
     </div>
@@ -212,20 +229,46 @@
     @else
         <div class="table-wrap">
             <table class="data-table">
-                <thead><tr><th>Route</th><th>Distanz</th><th>Blockzeit</th><th>Flüge</th><th>Status</th></tr></thead>
+                <thead><tr><th>Route</th><th>Distanz</th><th>Nachfrage</th><th>Economy</th><th>Business</th><th>First</th><th>Aktion</th></tr></thead>
                 <tbody>
                 @foreach($routes as $route)
+                    @php
+                        $pricing = $routePricing->get($route->id);
+                        $demandIndex = (float) data_get($route->settings, 'demand_index', 1.0);
+                    @endphp
                     <tr>
-                        <td><strong>{{ $route->origin->iata_code }} → {{ $route->destination->iata_code }}</strong><br><span class="muted">{{ $route->origin->city }} → {{ $route->destination->city }}</span></td>
+                        <td>
+                            <strong>{{ $route->origin->iata_code }} → {{ $route->destination->iata_code }}</strong><br>
+                            <span class="muted">{{ $route->origin->city }} → {{ $route->destination->city }}</span><br>
+                            <span class="muted">{{ intdiv($route->planned_block_minutes, 60) }}h {{ $route->planned_block_minutes % 60 }}m · {{ $route->flights_count }} Flüge</span>
+                        </td>
                         <td>{{ number_format((float) $route->distance_km, 0, ',', '.') }} km</td>
-                        <td>{{ intdiv($route->planned_block_minutes, 60) }}h {{ $route->planned_block_minutes % 60 }}m</td>
-                        <td>{{ $route->flights_count }}</td>
-                        <td><span class="badge">{{ $route->status === 'active' ? 'Aktiv' : $route->status }}</span></td>
+                        <td><span class="badge">Index {{ number_format($demandIndex, 2, ',', '.') }}</span></td>
+                        <td colspan="4">
+                            <form method="post" action="{{ route('operations.routes.fares.update', $route) }}" class="fare-form" style="display:grid;grid-template-columns:repeat(3,minmax(100px,1fr)) auto;gap:8px;align-items:end;min-width:470px">
+                                @csrf
+                                @method('PATCH')
+                                <div class="field">
+                                    <label>Economy</label>
+                                    <input type="number" name="economy_fare" min="10" max="5000" step="0.01" value="{{ number_format(($pricing['economy_minor'] ?? 0) / 100, 2, '.', '') }}" required>
+                                </div>
+                                <div class="field">
+                                    <label>Business</label>
+                                    <input type="number" name="business_fare" min="0" max="10000" step="0.01" value="{{ number_format(($pricing['business_minor'] ?? 0) / 100, 2, '.', '') }}" required>
+                                </div>
+                                <div class="field">
+                                    <label>First</label>
+                                    <input type="number" name="first_fare" min="0" max="20000" step="0.01" value="{{ number_format(($pricing['first_minor'] ?? 0) / 100, 2, '.', '') }}" required>
+                                </div>
+                                <button class="button" type="submit">Preise speichern</button>
+                            </form>
+                        </td>
                     </tr>
                 @endforeach
                 </tbody>
             </table>
         </div>
+        <p class="footer-note">Preise gelten für neu geplante Flüge. Bereits geplante Flüge behalten ihren Tarif-Snapshot, damit spätere Preisänderungen bestehende Buchungen nicht rückwirkend verändern.</p>
     @endif
 </section>
 
@@ -233,7 +276,7 @@
     <div class="section-title">
         <div>
             <span class="eyebrow">LIVE SCHEDULE</span>
-            <h3>Flugplan & Simulation</h3>
+            <h3>Flugplan, Buchungen & Simulation</h3>
         </div>
         <span class="badge">{{ $flights->count() }} Flüge</span>
     </div>
@@ -243,24 +286,44 @@
     @else
         <div class="table-wrap">
             <table class="data-table">
-                <thead><tr><th>Flug</th><th>Route</th><th>Flugzeug</th><th>Abflug</th><th>Ankunft</th><th>PAX</th><th>Ergebnis</th><th>Status</th></tr></thead>
+                <thead><tr><th>Flug</th><th>Route</th><th>Flugzeug</th><th>Abflug</th><th>Ankunft</th><th>Buchungen</th><th>Buchungswert</th><th>Ergebnis</th><th>Status</th></tr></thead>
                 <tbody>
                 @foreach($flights as $flight)
+                    @php
+                        $economyBooked = (int) data_get($flight->operational_data, 'commercial.cabins.economy.booked', 0);
+                        $businessBooked = (int) data_get($flight->operational_data, 'commercial.cabins.business.booked', 0);
+                        $firstBooked = (int) data_get($flight->operational_data, 'commercial.cabins.first.booked', 0);
+                        $bookingValueMinor =
+                            ((int) data_get($flight->operational_data, 'commercial.cabins.economy.revenue_minor', 0)) +
+                            ((int) data_get($flight->operational_data, 'commercial.cabins.business.revenue_minor', 0)) +
+                            ((int) data_get($flight->operational_data, 'commercial.cabins.first.revenue_minor', 0));
+                        $profitMinor = data_get($flight->operational_data, 'economics.profit_minor');
+                        $bookingProgress = (float) data_get($flight->operational_data, 'commercial.booking_progress', 0);
+                    @endphp
                     <tr>
                         <td><strong>{{ $flight->flight_number }}</strong></td>
                         <td>{{ $flight->route->origin->iata_code }} → {{ $flight->route->destination->iata_code }}</td>
                         <td>{{ $flight->aircraft?->registration ?? '–' }}</td>
                         <td>{{ $flight->scheduled_departure_at->timezone('Europe/Berlin')->format('d.m.Y H:i') }}</td>
                         <td>{{ $flight->scheduled_arrival_at->timezone('Europe/Berlin')->format('d.m.Y H:i') }}</td>
-                        <td>{{ $flight->passengers_booked > 0 ? $flight->passengers_booked : '–' }}</td>
                         <td>
-                            @if(data_get($flight->operational_data, 'economics.profit_minor') !== null)
-                                <strong class="{{ data_get($flight->operational_data, 'economics.profit_minor') >= 0 ? 'kpi-positive' : '' }}">{{ number_format(data_get($flight->operational_data, 'economics.profit_minor') / 100, 2, ',', '.') }} {{ $airline->base_currency }}</strong>
+                            <strong>{{ $flight->passengers_booked }}</strong>
+                            @if($economyBooked + $businessBooked + $firstBooked > 0)
+                                <br><span class="muted">E {{ $economyBooked }} · B {{ $businessBooked }} · F {{ $firstBooked }}</span>
+                            @endif
+                            @if($bookingProgress > 0 && !in_array($flight->status, ['completed', 'cancelled'], true))
+                                <br><span class="muted">{{ number_format($bookingProgress * 100, 0, ',', '.') }} % Buchungsphase</span>
+                            @endif
+                        </td>
+                        <td>{{ $bookingValueMinor > 0 ? number_format($bookingValueMinor / 100, 2, ',', '.').' '.$airline->base_currency : '–' }}</td>
+                        <td>
+                            @if($profitMinor !== null)
+                                <strong class="{{ $profitMinor >= 0 ? 'kpi-positive' : '' }}">{{ number_format($profitMinor / 100, 2, ',', '.') }} {{ $airline->base_currency }}</strong>
                             @else
                                 <span class="muted">–</span>
                             @endif
                         </td>
-                        <td><span class="badge">@switch($flight->status)@case('scheduled')Geplant@break @case('boarding')Boarding@break @case('departed')Abgeflogen@break @case('in_air')Unterwegs@break @case('completed')Gelandet@break @case('cancelled')Annulliert@break @default{{ ucfirst(str_replace('_', ' ', $flight->status)) }}@endswitch</span></td>
+                        <td><span class="badge">{{ $flightStatusLabels[$flight->status] ?? ucfirst(str_replace('_', ' ', $flight->status)) }}</span></td>
                     </tr>
                 @endforeach
                 </tbody>
@@ -269,5 +332,5 @@
     @endif
 </section>
 
-<p class="footer-note">Die Simulation Engine verarbeitet Boarding, Abflug, Reiseflug und Landung automatisch. Bei der Landung werden Passagierumsatz, Treibstoff und operative Kosten idempotent im Ledger verbucht und das Flugzeug am Zielflughafen verfügbar gemacht.</p>
+<p class="footer-note">Die Revenue-Management-Engine erzeugt innerhalb des Buchungsfensters fortlaufend Nachfrage. Preisniveau, Geschäftsmodell, Kabinenklasse, Streckennachfrage und Reisetag beeinflussen die Auslastung. Bei der Landung werden die tatsächlich gebuchten Tarife als Umsatz abgerechnet.</p>
 @endsection
