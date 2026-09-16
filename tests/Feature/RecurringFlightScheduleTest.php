@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\AircraftProcurement;
 use App\Models\AircraftType;
 use App\Models\Airline;
 use App\Models\Airport;
@@ -9,6 +10,7 @@ use App\Models\Flight;
 use App\Models\FlightSchedule;
 use App\Models\World;
 use App\Services\Operations\FlightScheduleService;
+use App\Services\Operations\ProcurementService;
 use Carbon\Carbon;
 use Database\Seeders\GameBootstrapSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -52,7 +54,10 @@ class RecurringFlightScheduleTest extends TestCase
         $this->post(route('operations.fleet.purchase'), [
             'aircraft_type_id' => $type->id,
             'registration' => 'D-AROT',
-        ])->assertRedirect(route('operations.index'));
+        ])->assertRedirect('/fleet-market');
+
+        $procurement = AircraftProcurement::query()->where('registration', 'D-AROT')->firstOrFail();
+        app(ProcurementService::class)->processWorld($world, $procurement->delivery_due_at->copy()->addMinute());
 
         $this->post(route('operations.routes.store'), [
             'origin_airport_id' => $frankfurt->id,
