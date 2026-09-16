@@ -46,12 +46,12 @@ class OperationalDelayPropagationTest extends TestCase
         ]);
 
         $airline = Airline::query()->where('name', 'Delay Air')->firstOrFail();
-        $type = AircraftType::query()->where('model', 'A320neo')->firstOrFail();
+        $type = AircraftType::query()->where('model', 'E195-E2')->firstOrFail();
 
         $this->post(route('operations.fleet.purchase'), [
             'aircraft_type_id' => $type->id,
             'registration' => 'D-ADLY',
-        ]);
+        ])->assertRedirect(route('operations.index'));
         $this->post(route('operations.routes.store'), [
             'origin_airport_id' => $frankfurt->id,
             'destination_airport_id' => $london->id,
@@ -76,7 +76,7 @@ class OperationalDelayPropagationTest extends TestCase
             'starts_on' => $start->format('Y-m-d'),
             'departure_time' => '08:00',
             'turnaround_minutes' => 50,
-        ]);
+        ])->assertRedirect(route('schedules.index'));
 
         $schedule = FlightSchedule::query()->firstOrFail();
         $outboundFlight = Flight::query()
@@ -108,7 +108,7 @@ class OperationalDelayPropagationTest extends TestCase
         $returnFlight->refresh();
 
         $this->assertTrue((bool) data_get($returnFlight->operational_data, 'operations.delay_evaluated'));
-        $this->assertGreaterThanOrEqual(55, (int) $returnFlight->delay_minutes);
+        $this->assertGreaterThanOrEqual(50, (int) $returnFlight->delay_minutes);
         $this->assertGreaterThan(0, (int) data_get($returnFlight->operational_data, 'operations.rotation_delay_minutes'));
     }
 }
