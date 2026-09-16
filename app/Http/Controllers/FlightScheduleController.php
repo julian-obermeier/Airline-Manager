@@ -8,7 +8,6 @@ use App\Models\AirlineRoute;
 use App\Models\FlightSchedule;
 use App\Models\World;
 use App\Services\Operations\FlightScheduleService;
-use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -88,7 +87,7 @@ class FlightScheduleController extends Controller
             'outbound_route_id' => ['required', 'string', 'exists:routes,id'],
             'return_route_id' => ['required', 'string', 'different:outbound_route_id', 'exists:routes,id'],
             'outbound_flight_number' => ['required', 'string', 'min:2', 'max:12', 'regex:/^[A-Za-z0-9 -]+$/'],
-            'return_flight_number' => ['required', 'string', 'min:2', 'max:12', 'regex:/^[A-Za-z0-9 -]+$/'],
+            'return_flight_number' => ['required', 'string', 'min:2', 'max:12', 'different:outbound_flight_number', 'regex:/^[A-Za-z0-9 -]+$/'],
             'days_of_week' => ['required', 'array', 'min:1'],
             'days_of_week.*' => ['integer', 'between:1,7'],
             'starts_on' => ['required', 'date', 'after_or_equal:today'],
