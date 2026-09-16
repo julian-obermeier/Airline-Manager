@@ -26,6 +26,7 @@
             <a class="{{ request()->routeIs('fleet-market.*') ? 'active' : '' }}" href="{{ route('fleet-market.index') }}">Flottenmarkt</a>
             <a class="{{ request()->routeIs('schedules.*') ? 'active' : '' }}" href="{{ route('schedules.index') }}">Flugpläne</a>
             <a class="{{ request()->routeIs('maintenance.*') ? 'active' : '' }}" href="{{ route('maintenance.index') }}">Maintenance</a>
+            <a class="{{ request()->routeIs('finance.*') ? 'active' : '' }}" href="{{ route('finance.index') }}">Finanzen</a>
             <a class="{{ request()->routeIs('worlds.*') ? 'active' : '' }}" href="{{ route('worlds.index') }}">Spielwelten</a>
         </nav>
 
