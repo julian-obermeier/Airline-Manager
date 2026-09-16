@@ -34,7 +34,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', [GameController::class, 'dashboard'])->name('dashboard');
 
     Route::get('/operations', [OperationsController::class, 'index'])->name('operations.index');
-    Route::post('/operations/fleet/purchase', [OperationsController::class, 'purchaseAircraft'])->name('operations.fleet.purchase');
+    Route::post('/operations/fleet/purchase', [FleetMarketController::class, 'orderNew'])->name('operations.fleet.purchase');
     Route::post('/operations/routes', [OperationsController::class, 'storeRoute'])->name('operations.routes.store');
     Route::patch('/operations/routes/{route}/fares', [OperationsController::class, 'updateRouteFares'])->name('operations.routes.fares.update');
     Route::post('/operations/flights', [OperationsController::class, 'scheduleFlight'])->name('operations.flights.store');
