@@ -73,21 +73,26 @@ DB_PASSWORD=DEIN_KAS_DATENBANKPASSWORT
 
 Die Datei `.env` darf niemals öffentlich oder in Git eingecheckt werden.
 
-## 4. Laravel initialisieren
+## 4. Laravel aktivieren
 
-Wenn PHP 8.3 unter `/usr/bin/php83` verfügbar ist:
+Das Repository enthält für dieses Zielsystem ein Aktivierungsskript. Es erstellt die benötigten Runtime-Verzeichnisse, erzeugt bei Bedarf den Application Key, führt Migrationen aus und baut die Laravel-Caches.
 
 ```bash
 cd /www/htdocs/w021867a/airline.obermeier-it.de
-/usr/bin/php83 artisan key:generate --force
-/usr/bin/php83 artisan optimize:clear
-/usr/bin/php83 artisan migrate --force
-/usr/bin/php83 artisan config:cache
-/usr/bin/php83 artisan route:cache
-/usr/bin/php83 artisan view:cache
+bash scripts/activate-all-inkl.sh
 ```
 
-Alternativ kann `php` verwendet werden, wenn im SSH-Zugang bereits PHP 8.3+ als Standard-CLI-Version eingestellt wurde.
+Das Skript verwendet standardmäßig:
+
+```text
+/usr/bin/php83
+```
+
+Falls auf dem Account ein anderer PHP-CLI-Pfad erforderlich ist:
+
+```bash
+PHP_BIN=/usr/bin/php84 bash scripts/activate-all-inkl.sh
+```
 
 ## 5. Domain auf `public/` stellen
 
@@ -124,27 +129,21 @@ Bei jedem neuen Release:
 1. Datenbank sichern.
 2. Neues CI-Deployment-Artefakt einspielen.
 3. Bestehende `.env` behalten.
-4. Danach ausführen:
+4. Danach erneut ausführen:
 
 ```bash
-/usr/bin/php83 artisan optimize:clear
-/usr/bin/php83 artisan migrate --force
-/usr/bin/php83 artisan config:cache
-/usr/bin/php83 artisan route:cache
-/usr/bin/php83 artisan view:cache
+bash scripts/activate-all-inkl.sh
 ```
 
 Benutzerdaten in `storage/` und die produktive `.env` dürfen beim Update nicht überschrieben oder gelöscht werden.
 
 ## 8. Scheduler für spätere Simulationen
 
-Sobald zeitgesteuerte Simulationen benötigt werden, wird auf ALL-INKL **kein** dauerhafter `schedule:work`-Prozess gestartet. Stattdessen wird ein KAS-Cronjob verwendet, der regelmäßig Folgendes ausführt:
+Sobald zeitgesteuerte Simulationen benötigt werden, wird auf ALL-INKL **kein** dauerhafter `schedule:work`-Prozess gestartet.
 
-```bash
-/usr/bin/php83 /www/htdocs/w021867a/airline.obermeier-it.de/artisan schedule:run
-```
+ALL-INKL-Cronjobs werden im KAS eingerichtet und müssen dort über eine HTTP(S)-aufrufbare Datei bzw. das von ALL-INKL dokumentierte Shellskript-Verfahren gestartet werden. Deshalb wird vor Einführung der Simulation Engine ein eigener geschützter Scheduler-Wrapper umgesetzt.
 
-Die eigentlichen Simulationsjobs müssen deshalb kurzlaufend, idempotent und cron-tauglich implementiert werden.
+Die späteren Simulationsjobs müssen kurzlaufend, idempotent und cron-tauglich sein.
 
 ## Nicht auf Shared Hosting starten
 
