@@ -7,9 +7,10 @@
 - Flughäfen und Flugzeugmuster sind globale Stammdaten.
 - Airlines, konkrete Flugzeuge, Routen, Flüge und Finanzen sind weltbezogen.
 - Fachliche Kernobjekte verwenden ULIDs.
-- Zeitpunkte werden UTC-normalisiert als timezone-aware timestamps gespeichert.
+- Zeitpunkte werden von der Anwendung UTC-normalisiert gespeichert und verarbeitet.
 - Geld wird in Minor Units (z. B. Cent) als Integer gespeichert; keine Floats.
-- Strukturierte Zusatzdaten verwenden PostgreSQL `jsonb`.
+- Strukturierte Zusatzdaten verwenden portable JSON-Spalten, kompatibel mit MySQL/MariaDB.
+- Das Schema vermeidet bewusst PostgreSQL-spezifische Typen, damit das ALL-INKL-Produktionsprofil unterstützt wird.
 
 ## Kernbeziehungen
 
