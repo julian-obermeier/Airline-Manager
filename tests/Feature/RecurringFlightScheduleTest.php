@@ -47,7 +47,7 @@ class RecurringFlightScheduleTest extends TestCase
         ]);
 
         $airline = Airline::query()->where('name', 'Rotation Air')->firstOrFail();
-        $type = AircraftType::query()->where('model', 'A320neo')->firstOrFail();
+        $type = AircraftType::query()->where('model', 'E195-E2')->firstOrFail();
 
         $this->post(route('operations.fleet.purchase'), [
             'aircraft_type_id' => $type->id,
@@ -94,7 +94,7 @@ class RecurringFlightScheduleTest extends TestCase
         $this->assertNotNull($firstReturn);
         $this->assertSame($outbound->id, $firstOutbound->route_id);
         $this->assertSame($return->id, $firstReturn->route_id);
-        $this->assertSame(50, $firstOutbound->scheduled_arrival_at->diffInMinutes($firstReturn->scheduled_departure_at));
+        $this->assertSame(50, (int) $firstOutbound->scheduled_arrival_at->diffInMinutes($firstReturn->scheduled_departure_at));
         $this->assertSame('outbound', data_get($firstOutbound->operational_data, 'rotation.leg'));
         $this->assertSame('return', data_get($firstReturn->operational_data, 'rotation.leg'));
 
@@ -107,6 +107,6 @@ class RecurringFlightScheduleTest extends TestCase
         $this->get(route('schedules.index'))
             ->assertOk()
             ->assertSee('RA201 / RA202')
-            ->assertSee('FRA → LHR → FRA');
+            ->assertSeeText('FRA → LHR → FRA');
     }
 }
