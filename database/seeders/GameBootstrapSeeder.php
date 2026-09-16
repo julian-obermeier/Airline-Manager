@@ -101,29 +101,32 @@ class GameBootstrapSeeder extends Seeder
                 'manufacturer' => 'Airbus', 'model' => 'A220', 'variant' => 'A220-300', 'icao_type_code' => 'BCS3',
                 'typical_seats' => 137, 'max_seats' => 160, 'range_km' => 6297, 'cruise_speed_kmh' => 829,
                 'minimum_runway_m' => 1890, 'max_payload_kg' => 18450, 'fuel_capacity_l' => 21805,
-                'reference_purchase_price_minor' => 3500000000,
+                'reference_purchase_price_minor' => 3500000000, 'fuel_burn_l_per_hour' => 2100,
             ],
             [
                 'manufacturer' => 'Embraer', 'model' => 'E195-E2', 'variant' => 'E195-E2', 'icao_type_code' => 'E295',
                 'typical_seats' => 132, 'max_seats' => 146, 'range_km' => 4815, 'cruise_speed_kmh' => 870,
                 'minimum_runway_m' => 1800, 'max_payload_kg' => 16100, 'fuel_capacity_l' => 17100,
-                'reference_purchase_price_minor' => 3200000000,
+                'reference_purchase_price_minor' => 3200000000, 'fuel_burn_l_per_hour' => 2200,
             ],
             [
                 'manufacturer' => 'Airbus', 'model' => 'A320neo', 'variant' => 'A320-251N', 'icao_type_code' => 'A20N',
                 'typical_seats' => 180, 'max_seats' => 194, 'range_km' => 6300, 'cruise_speed_kmh' => 840,
                 'minimum_runway_m' => 1950, 'max_payload_kg' => 19000, 'fuel_capacity_l' => 26730,
-                'reference_purchase_price_minor' => 5500000000,
+                'reference_purchase_price_minor' => 5500000000, 'fuel_burn_l_per_hour' => 2500,
             ],
             [
                 'manufacturer' => 'Boeing', 'model' => '737 MAX 8', 'variant' => '737-8', 'icao_type_code' => 'B38M',
                 'typical_seats' => 178, 'max_seats' => 210, 'range_km' => 6570, 'cruise_speed_kmh' => 842,
                 'minimum_runway_m' => 2100, 'max_payload_kg' => 20200, 'fuel_capacity_l' => 25816,
-                'reference_purchase_price_minor' => 5200000000,
+                'reference_purchase_price_minor' => 5200000000, 'fuel_burn_l_per_hour' => 2600,
             ],
         ];
 
         foreach ($aircraftTypes as $type) {
+            $fuelBurn = $type['fuel_burn_l_per_hour'];
+            unset($type['fuel_burn_l_per_hour']);
+
             AircraftType::query()->updateOrCreate(
                 [
                     'manufacturer' => $type['manufacturer'],
@@ -133,7 +136,11 @@ class GameBootstrapSeeder extends Seeder
                 $type + [
                     'reference_currency' => 'EUR',
                     'production_status' => 'active',
-                    'technical_data' => ['bootstrap' => true, 'pricing' => 'game_reference'],
+                    'technical_data' => [
+                        'bootstrap' => true,
+                        'pricing' => 'game_reference',
+                        'fuel_burn_l_per_hour' => $fuelBurn,
+                    ],
                 ]
             );
         }
