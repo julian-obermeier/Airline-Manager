@@ -4,6 +4,7 @@ use App\Http\Controllers\AirlineController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\FlightScheduleController;
 use App\Http\Controllers\GameController;
+use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\OperationsController;
 use App\Http\Controllers\SimulationController;
 use Illuminate\Support\Facades\Route;
@@ -40,4 +41,8 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/schedules', [FlightScheduleController::class, 'index'])->name('schedules.index');
     Route::post('/schedules', [FlightScheduleController::class, 'store'])->name('schedules.store');
     Route::patch('/schedules/{schedule}/toggle', [FlightScheduleController::class, 'toggle'])->name('schedules.toggle');
+
+    Route::get('/maintenance', [MaintenanceController::class, 'index'])->name('maintenance.index');
+    Route::post('/maintenance', [MaintenanceController::class, 'store'])->name('maintenance.store');
+    Route::patch('/maintenance/{event}/cancel', [MaintenanceController::class, 'cancel'])->name('maintenance.cancel');
 });
