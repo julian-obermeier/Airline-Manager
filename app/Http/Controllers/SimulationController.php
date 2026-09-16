@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\World;
+use App\Services\Operations\FlightLocationGuardService;
 use App\Services\Operations\MaintenanceService;
 use App\Services\Operations\ProcurementService;
 use App\Services\Simulation\FlightSimulationService;
@@ -16,13 +17,16 @@ class SimulationController extends Controller
         FlightSimulationService $simulation,
         MaintenanceService $maintenance,
         ProcurementService $procurement,
+        FlightLocationGuardService $locationGuard,
     ): JsonResponse {
         $configuredToken = (string) config('simulation.cron_token');
         $providedToken = (string) $request->query('token');
 
         abort_if($configuredToken === '' || ! hash_equals($configuredToken, $providedToken), 403);
 
-        $tick = $simulation->tick();
+        $realNow = now();
+        $locationSummary = $locationGuard->guardBeforeTick($realNow);
+        $tick = $simulation->tick($realNow);
         $maintenanceSummary = [
             'maintenance_started' => 0,
             'maintenance_completed' => 0,
@@ -55,6 +59,7 @@ class SimulationController extends Controller
 
         return response()->json([
             'status' => 'ok',
+            'location_guard' => $locationSummary,
             'tick' => $tick,
             'maintenance' => $maintenanceSummary,
             'procurement' => $procurementSummary,
