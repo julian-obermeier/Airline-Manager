@@ -1,24 +1,25 @@
 # Setup – Airline Empire
 
-## Voraussetzungen
+## Voraussetzungen für lokale Entwicklung
 
 - PHP 8.3 oder neuer
 - Composer 2
 - Node.js 22 oder neuer
-- PostgreSQL 16+
-- Redis 7+
-- PHP-Erweiterungen für PostgreSQL und Redis
+- MySQL 8+ oder MariaDB 10.3+
+- PHP-Erweiterung `pdo_mysql`
+
+Redis ist **optional** und für den aktuellen Shared-Hosting-/Foundation-Betrieb nicht erforderlich.
 
 ## Datenbank
 
-Lege eine PostgreSQL-Datenbank und einen Benutzer an, zum Beispiel:
+Lege lokal eine MySQL-/MariaDB-Datenbank und einen Benutzer an, zum Beispiel:
 
 - Datenbank: `airline_manager`
 - Benutzer: `airline_manager`
 
 Die Zugangsdaten werden ausschließlich in `.env` gespeichert.
 
-## Installation
+## Lokale Installation
 
 ```bash
 cp .env.example .env
@@ -41,23 +42,33 @@ Laravel lokal starten:
 php artisan serve
 ```
 
-Queue Worker:
+## Shared-Hosting-Profil
+
+Standardmäßig verwendet die Anwendung:
+
+```env
+DB_CONNECTION=mysql
+SESSION_DRIVER=file
+CACHE_STORE=file
+QUEUE_CONNECTION=sync
+BROADCAST_CONNECTION=log
+```
+
+Damit werden weder Redis noch dauerhaft laufende Queue- oder WebSocket-Prozesse benötigt.
+
+Für ALL-INKL liegt eine eigene Produktionsvorlage unter `.env.all-inkl.example` vor.
+
+## Spätere Server-Skalierung
+
+Auf einem geeigneten Managed-/dedizierten Server können optional aktiviert werden:
 
 ```bash
 php artisan queue:work --tries=3 --timeout=120
-```
-
-Reverb:
-
-```bash
 php artisan reverb:start
-```
-
-Scheduler im lokalen Entwicklungsbetrieb:
-
-```bash
 php artisan schedule:work
 ```
+
+Diese Prozesse gehören **nicht** zum ALL-INKL-Shared-Hosting-Profil.
 
 ## Webserver
 
@@ -76,6 +87,8 @@ npm run typecheck
 npm run build
 ```
 
+Die GitHub-CI testet Migrationen und PHP-Code gegen MariaDB und baut außerdem ein fertiges ALL-INKL-Deployment-Archiv.
+
 ## Produktionsbetrieb
 
 Vor einem Production Deploy mindestens:
@@ -87,6 +100,6 @@ php artisan route:cache
 php artisan view:cache
 ```
 
-Queue Worker und Reverb sollten über einen Process Supervisor/systemd oder eine gleichwertige Prozessverwaltung dauerhaft betrieben werden.
+`APP_DEBUG` muss in Produktion `false` sein. Datenbankzugänge, Mail- und andere Secrets werden über die produktive `.env` konfiguriert und niemals committed.
 
-`APP_DEBUG` muss in Produktion `false` sein. Reverb Origins, Datenbankzugänge, Redis, Mail und Storage werden über die produktive `.env` konfiguriert und niemals committed.
+Für das konkrete Zielsystem siehe [`deployment-all-inkl.md`](deployment-all-inkl.md).
