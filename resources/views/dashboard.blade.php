@@ -31,10 +31,10 @@
 
 <section class="card hero" style="margin-top:18px">
     <div>
-        <span class="eyebrow">AIRLINE PROFILE</span>
+        <span class="eyebrow">AIRLINE OPERATIONS</span>
         <h2>{{ $airline->name }} ist betriebsbereit.</h2>
-        <p class="muted">Deine Airline ist mit Heimatflughafen, Geschäftsmodell und Finanz-Ledger vollständig in der Welt angelegt. Als Nächstes werden Flottenbeschaffung, Routenplanung und konkrete Flugoperationen freigeschaltet.</p>
-        <div class="world-meta">
+        <p class="muted">Flottenbeschaffung, Streckennetz und konkrete Flugplanung sind jetzt aktiv. Flugzeugkäufe werden direkt im Finanz-Ledger verbucht und der Flugplan wird serverseitig auf Reichweite und Überschneidungen geprüft.</p>
+        <div class="world-meta" style="margin:18px 0">
             <span class="badge">{{ strtoupper($airline->business_model) }}</span>
             <span class="badge">{{ strtoupper($airline->service_concept ?? 'balanced') }}</span>
             <span class="badge">{{ strtoupper($airline->target_group ?? 'mixed') }}</span>
@@ -42,6 +42,7 @@
             @if($airline->icao_code)<span class="badge">ICAO {{ $airline->icao_code }}</span>@endif
             @if($airline->callsign)<span class="badge">{{ $airline->callsign }}</span>@endif
         </div>
+        <a class="button primary" href="{{ route('operations.index') }}">Betriebszentrale öffnen</a>
     </div>
 </section>
 
@@ -79,5 +80,5 @@
     </section>
 </div>
 
-<p class="footer-note">Phase 1 Gameplay-Basis: Account, Welten, Airline-Gründung und Ledger sind jetzt aktiv. Noch nicht implementierte Module werden nicht als funktionsfähige Buttons dargestellt.</p>
+<p class="footer-note">Aktiv: Account, Welten, Airline-Gründung, Finanz-Ledger, Flottenkauf, Routenplanung und konkrete Flugplanung.</p>
 @endsection
