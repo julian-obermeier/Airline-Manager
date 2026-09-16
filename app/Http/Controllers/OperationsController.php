@@ -12,6 +12,7 @@ use App\Models\LedgerAccount;
 use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
 use App\Models\World;
+use App\Services\Commercial\RevenueManagementService;
 use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -22,6 +23,10 @@ use Illuminate\View\View;
 
 class OperationsController extends Controller
 {
+    public function __construct(private readonly RevenueManagementService $revenueManagement)
+    {
+    }
+
     public function index(Request $request): View|RedirectResponse
     {
         $context = $this->activeContext($request);
@@ -55,6 +60,10 @@ class OperationsController extends Controller
             ->limit(30)
             ->get();
 
+        $routePricing = $routes->mapWithKeys(fn (AirlineRoute $route): array => [
+            $route->id => $this->revenueManagement->routeFares($route, $airline->business_model),
+        ]);
+
         return view('operations.index', [
             'world' => $world,
             'airline' => $airline,
@@ -67,6 +76,7 @@ class OperationsController extends Controller
             'airports' => Airport::query()->orderBy('country_code')->orderBy('city')->get(),
             'fleet' => $fleet,
             'routes' => $routes,
+            'routePricing' => $routePricing,
             'flights' => $flights,
         ]);
     }
@@ -111,7 +121,10 @@ class OperationsController extends Controller
             ? strtoupper($validated['registration'])
             : $this->generateRegistration($world, $airline);
 
-        DB::transaction(function () use ($world, $airline, $type, $priceMinor, $registration): void {
+        $totalSeats = max(1, (int) ($type->typical_seats ?? 1));
+        $cabins = $this->revenueManagement->cabinLayout($totalSeats, $airline->business_model);
+
+        DB::transaction(function () use ($world, $airline, $type, $priceMinor, $registration, $totalSeats, $cabins): void {
             $aircraft = Aircraft::create([
                 'world_id' => $world->id,
                 'airline_id' => $airline->id,
@@ -129,7 +142,8 @@ class OperationsController extends Controller
                 'acquisition_price_minor' => $priceMinor,
                 'currency' => $airline->base_currency,
                 'configuration' => [
-                    'seats' => $type->typical_seats,
+                    'seats' => $totalSeats,
+                    'cabins' => $cabins,
                 ],
                 'metadata' => [
                     'acquired_via' => 'new_aircraft_market',
@@ -226,10 +240,43 @@ class OperationsController extends Controller
             'status' => 'active',
             'settings' => [
                 'calculation' => 'great_circle_v1',
+                'fares' => $this->revenueManagement->defaultFares($distanceKm, $airline->business_model),
+                'demand_index' => $this->revenueManagement->demandIndex($origin, $destination),
             ],
         ]);
 
-        return redirect()->route('operations.index')->with('success', 'Route wurde angelegt.');
+        return redirect()->route('operations.index')->with('success', 'Route wurde angelegt. Standardtarife und Marktnachfrage wurden berechnet.');
+    }
+
+    public function updateRouteFares(Request $request, AirlineRoute $route): RedirectResponse
+    {
+        $context = $this->activeContext($request);
+
+        if (! $context) {
+            return redirect()->route('home');
+        }
+
+        [$world, $airline] = $context;
+
+        abort_unless($route->world_id === $world->id && $route->airline_id === $airline->id, 404);
+
+        $validated = $request->validate([
+            'economy_fare' => ['required', 'numeric', 'min:10', 'max:5000'],
+            'business_fare' => ['required', 'numeric', 'min:0', 'max:10000'],
+            'first_fare' => ['required', 'numeric', 'min:0', 'max:20000'],
+        ]);
+
+        $settings = $route->settings ?? [];
+        $settings['fares'] = [
+            'economy_minor' => (int) round(((float) $validated['economy_fare']) * 100),
+            'business_minor' => (int) round(((float) $validated['business_fare']) * 100),
+            'first_minor' => (int) round(((float) $validated['first_fare']) * 100),
+        ];
+        $settings['pricing_updated_at'] = now()->toIso8601String();
+
+        $route->forceFill(['settings' => $settings])->save();
+
+        return redirect()->route('operations.index')->with('success', 'Ticketpreise wurden gespeichert. Sie gelten für neu geplante Flüge.');
     }
 
     public function scheduleFlight(Request $request): RedirectResponse
@@ -290,6 +337,18 @@ class OperationsController extends Controller
             ]);
         }
 
+        $totalSeats = max(1, (int) data_get($aircraft->configuration, 'seats', $aircraft->type?->typical_seats ?? 1));
+        $configuredCabins = data_get($aircraft->configuration, 'cabins');
+        $cabins = is_array($configuredCabins) && array_sum(array_map('intval', $configuredCabins)) > 0
+            ? [
+                'economy' => max(0, (int) ($configuredCabins['economy'] ?? 0)),
+                'business' => max(0, (int) ($configuredCabins['business'] ?? 0)),
+                'first' => max(0, (int) ($configuredCabins['first'] ?? 0)),
+            ]
+            : $this->revenueManagement->cabinLayout($totalSeats, $airline->business_model);
+
+        $fares = $this->revenueManagement->routeFares($route, $airline->business_model);
+
         Flight::create([
             'world_id' => $world->id,
             'airline_id' => $airline->id,
@@ -305,10 +364,31 @@ class OperationsController extends Controller
             'operational_data' => [
                 'planned_block_minutes' => $route->planned_block_minutes,
                 'distance_km' => (float) $route->distance_km,
+                'commercial' => [
+                    'route_demand_index' => (float) data_get($route->settings, 'demand_index', 1.0),
+                    'booking_window_days' => (int) config('simulation.booking_window_days', 14),
+                    'cabins' => [
+                        'economy' => [
+                            'capacity' => $cabins['economy'],
+                            'fare_minor' => $fares['economy_minor'],
+                            'booked' => 0,
+                        ],
+                        'business' => [
+                            'capacity' => $cabins['business'],
+                            'fare_minor' => $fares['business_minor'],
+                            'booked' => 0,
+                        ],
+                        'first' => [
+                            'capacity' => $cabins['first'],
+                            'fare_minor' => $fares['first_minor'],
+                            'booked' => 0,
+                        ],
+                    ],
+                ],
             ],
         ]);
 
-        return redirect()->route('operations.index')->with('success', 'Flug wurde geplant.');
+        return redirect()->route('operations.index')->with('success', 'Flug wurde geplant. Ticketpreise und Kabineninventar wurden für diesen Flug eingefroren.');
     }
 
     private function activeContext(Request $request): ?array
