@@ -381,8 +381,7 @@ textarea {
     }
 
     .brand > div:last-child,
-    .nav-link:not(.router-link-active) > :not(.nav-icon),
-    .nav-link.router-link-active > :not(.nav-icon),
+    .nav-label,
     .phase-pill {
         display: none;
     }
