@@ -32,17 +32,9 @@ if [[ ! -f vendor/autoload.php ]]; then
         --no-progress
 fi
 
-if [[ ! -f public/build/manifest.json ]]; then
-    echo "Frontend-Build fehlt – erstelle Vite-Produktionsbuild ..."
-
-    if ! command -v npm >/dev/null 2>&1; then
-        echo "FEHLER: public/build fehlt und npm ist auf diesem SSH-System nicht verfügbar." >&2
-        echo "Nutze in diesem Fall das fertige GitHub-Actions-Deployment-Artefakt." >&2
-        exit 1
-    fi
-
-    npm install --ignore-scripts --no-audit --no-fund
-    npm run build
+if [[ ! -f public/build/assets/app-Cdklvegz.css ]]; then
+    echo "FEHLER: Das statische Produktions-CSS fehlt. Führe zuerst 'git pull origin main' aus." >&2
+    exit 1
 fi
 
 mkdir -p \
@@ -65,5 +57,6 @@ fi
 "$PHP_BIN" artisan view:cache
 
 printf '\nAirline Empire wurde für ALL-INKL aktiviert.\n'
-printf 'Health: https://airline.obermeier-it.de/up\n'
-printf 'API:    https://airline.obermeier-it.de/api/v1/health\n'
+printf 'Website: https://airline.obermeier-it.de\n'
+printf 'Health:  https://airline.obermeier-it.de/up\n'
+printf 'API:     https://airline.obermeier-it.de/api/v1/health\n'
