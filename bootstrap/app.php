@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureAircraftAtRouteOrigin;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,6 +14,9 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
+        $middleware->alias([
+            'aircraft.position' => EnsureAircraftAtRouteOrigin::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Domain-specific exception rendering will be added per module.
