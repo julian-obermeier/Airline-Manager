@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AirlineController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\FleetMarketController;
 use App\Http\Controllers\FlightScheduleController;
 use App\Http\Controllers\GameController;
@@ -51,4 +52,6 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/maintenance', [MaintenanceController::class, 'index'])->name('maintenance.index');
     Route::post('/maintenance', [MaintenanceController::class, 'store'])->name('maintenance.store');
     Route::patch('/maintenance/{event}/cancel', [MaintenanceController::class, 'cancel'])->name('maintenance.cancel');
+
+    Route::get('/finance', [FinanceController::class, 'index'])->name('finance.index');
 });
