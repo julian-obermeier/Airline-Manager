@@ -1,8 +1,11 @@
 <?php
 
 return [
-    'default' => env('BROADCAST_CONNECTION', 'null'),
+    'default' => env('BROADCAST_CONNECTION', 'log'),
+
     'connections' => [
+        // Reverb remains an optional future connection for a managed server.
+        // It is not started or required by the ALL-INKL shared-hosting profile.
         'reverb' => [
             'driver' => 'reverb',
             'key' => env('REVERB_APP_KEY'),
@@ -16,9 +19,11 @@ return [
             ],
             'client_options' => [],
         ],
+
         'log' => [
             'driver' => 'log',
         ],
+
         'null' => [
             'driver' => 'null',
         ],
