@@ -17,44 +17,32 @@ jobs:
     runs-on: ubuntu-latest
 
     services:
-      postgres:
-        image: postgres:16
+      mariadb:
+        image: mariadb:10.11
         env:
-          POSTGRES_DB: airline_manager
-          POSTGRES_USER: airline_manager
-          POSTGRES_PASSWORD: airline_manager
+          MARIADB_DATABASE: airline_manager
+          MARIADB_USER: airline_manager
+          MARIADB_PASSWORD: airline_manager
+          MARIADB_ROOT_PASSWORD: root
         ports:
-          - 5432:5432
+          - 3306:3306
         options: >-
-          --health-cmd="pg_isready -U airline_manager -d airline_manager"
+          --health-cmd="healthcheck.sh --connect --innodb_initialized"
           --health-interval=10s
           --health-timeout=5s
-          --health-retries=5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
+          --health-retries=10
 
     env:
       APP_ENV: testing
       APP_DEBUG: false
       APP_URL: http://localhost
       APP_KEY: base64:KjOvh9H2qlnR0I6wzEHITQ+eG0REx3bF7d9ydL3bHwc=
-      DB_CONNECTION: pgsql
+      DB_CONNECTION: mysql
       DB_HOST: 127.0.0.1
-      DB_PORT: 5432
+      DB_PORT: 3306
       DB_DATABASE: airline_manager
       DB_USERNAME: airline_manager
       DB_PASSWORD: airline_manager
-      REDIS_CLIENT: phpredis
-      REDIS_HOST: 127.0.0.1
-      REDIS_PORT: 6379
       CACHE_STORE: array
       SESSION_DRIVER: array
       QUEUE_CONNECTION: sync
@@ -68,8 +56,8 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.4'
-          extensions: mbstring, pdo_pgsql, redis
+          php-version: '8.3'
+          extensions: mbstring, pdo_mysql
           coverage: none
 
       - name: Setup Node
@@ -94,3 +82,25 @@ jobs:
 
       - name: Build frontend
         run: npm run build
+
+      - name: Prepare production PHP dependencies
+        run: composer install --no-dev --no-interaction --prefer-dist --optimize-autoloader --no-progress
+
+      - name: Build ALL-INKL deployment archive
+        run: |
+          tar \
+            --exclude='./.git' \
+            --exclude='./.github' \
+            --exclude='./node_modules' \
+            --exclude='./tests' \
+            --exclude='./.env' \
+            --exclude='./airline-manager-all-inkl.tar.gz' \
+            -czf airline-manager-all-inkl.tar.gz .
+
+      - name: Upload ALL-INKL deployment archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: airline-manager-all-inkl
+          path: airline-manager-all-inkl.tar.gz
+          if-no-files-found: error
+          retention-days: 14
