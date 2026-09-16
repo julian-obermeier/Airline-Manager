@@ -14,8 +14,10 @@ use Illuminate\Support\Facades\DB;
 
 class FlightScheduleService
 {
-    public function __construct(private readonly RevenueManagementService $revenueManagement)
-    {
+    public function __construct(
+        private readonly RevenueManagementService $revenueManagement,
+        private readonly MaintenanceService $maintenance,
+    ) {
     }
 
     public function minimumTurnaroundMinutes(Aircraft $aircraft): int
@@ -312,6 +314,14 @@ class FlightScheduleService
         int $minimumTurnaround,
         array $excludedFlightIds
     ): bool {
+        if ($schedule->aircraft->status === 'grounded') {
+            return false;
+        }
+
+        if ($this->maintenance->hasMaintenanceConflict($schedule->aircraft, $departure, $returnArrival)) {
+            return false;
+        }
+
         $conflict = Flight::query()
             ->where('aircraft_id', $schedule->aircraft_id)
             ->whereNotIn('status', ['cancelled'])
