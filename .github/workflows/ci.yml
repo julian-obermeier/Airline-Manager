@@ -94,13 +94,12 @@ jobs:
             --exclude='./node_modules' \
             --exclude='./tests' \
             --exclude='./.env' \
-            --exclude='./airline-manager-all-inkl.tar.gz' \
-            -czf airline-manager-all-inkl.tar.gz .
+            -czf "$RUNNER_TEMP/airline-manager-all-inkl.tar.gz" .
 
       - name: Upload ALL-INKL deployment archive
         uses: actions/upload-artifact@v4
         with:
           name: airline-manager-all-inkl
-          path: airline-manager-all-inkl.tar.gz
+          path: ${{ runner.temp }}/airline-manager-all-inkl.tar.gz
           if-no-files-found: error
           retention-days: 14
