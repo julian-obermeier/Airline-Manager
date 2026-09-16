@@ -50,6 +50,16 @@ if grep -q '^APP_KEY=$' .env; then
     "$PHP_BIN" artisan key:generate --force
 fi
 
+if ! grep -q '^SIMULATION_CRON_TOKEN=' .env || grep -q '^SIMULATION_CRON_TOKEN=$' .env; then
+    SIMULATION_TOKEN="$($PHP_BIN -r 'echo bin2hex(random_bytes(32));')"
+
+    if grep -q '^SIMULATION_CRON_TOKEN=' .env; then
+        sed -i "s/^SIMULATION_CRON_TOKEN=.*/SIMULATION_CRON_TOKEN=${SIMULATION_TOKEN}/" .env
+    else
+        printf '\nSIMULATION_CRON_TOKEN=%s\n' "$SIMULATION_TOKEN" >> .env
+    fi
+fi
+
 "$PHP_BIN" artisan optimize:clear
 "$PHP_BIN" artisan migrate --force
 "$PHP_BIN" artisan db:seed --force
@@ -57,8 +67,12 @@ fi
 "$PHP_BIN" artisan route:cache
 "$PHP_BIN" artisan view:cache
 
+SIMULATION_TOKEN="$(grep '^SIMULATION_CRON_TOKEN=' .env | cut -d= -f2-)"
+
 printf '\nAirline Empire wurde für ALL-INKL aktiviert.\n'
 printf 'Website: https://airline.obermeier-it.de\n'
 printf 'Login:   https://airline.obermeier-it.de/login\n'
 printf 'Health:  https://airline.obermeier-it.de/up\n'
 printf 'API:     https://airline.obermeier-it.de/api/v1/health\n'
+printf '\nSimulation-Cron (empfohlen alle 5 Minuten):\n'
+printf 'https://airline.obermeier-it.de/system/cron/simulate?token=%s\n' "$SIMULATION_TOKEN"
