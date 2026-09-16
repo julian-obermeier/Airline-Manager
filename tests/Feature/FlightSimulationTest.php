@@ -2,12 +2,14 @@
 
 namespace Tests\Feature;
 
+use App\Models\AircraftProcurement;
 use App\Models\AircraftType;
 use App\Models\Airline;
 use App\Models\Airport;
 use App\Models\Flight;
 use App\Models\LedgerTransaction;
 use App\Models\World;
+use App\Services\Operations\ProcurementService;
 use App\Services\Simulation\FlightSimulationService;
 use Carbon\Carbon;
 use Database\Seeders\GameBootstrapSeeder;
@@ -53,6 +55,10 @@ class FlightSimulationTest extends TestCase
             'aircraft_type_id' => $type->id,
             'registration' => 'D-ASIM',
         ]);
+
+        $procurement = AircraftProcurement::query()->where('registration', 'D-ASIM')->firstOrFail();
+        app(ProcurementService::class)->processWorld($world, $procurement->delivery_due_at->copy()->addMinute());
+
         $this->post(route('operations.routes.store'), [
             'origin_airport_id' => $frankfurt->id,
             'destination_airport_id' => $munich->id,
