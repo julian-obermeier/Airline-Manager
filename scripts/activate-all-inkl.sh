@@ -16,6 +16,24 @@ if [[ ! -x "$PHP_BIN" ]]; then
     exit 1
 fi
 
+# A normal Git checkout intentionally does not contain vendor/.
+# Install production dependencies automatically before artisan is executed.
+if [[ ! -f vendor/autoload.php ]]; then
+    echo "Composer-Abhängigkeiten fehlen – installiere Produktionsabhängigkeiten ..."
+
+    if ! command -v composer >/dev/null 2>&1; then
+        echo "FEHLER: composer wurde im SSH-Pfad nicht gefunden." >&2
+        exit 1
+    fi
+
+    composer install \
+        --no-dev \
+        --no-interaction \
+        --prefer-dist \
+        --optimize-autoloader \
+        --no-progress
+fi
+
 mkdir -p \
     storage/app/private \
     storage/app/public \
