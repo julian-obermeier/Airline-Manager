@@ -16,8 +16,6 @@ if [[ ! -x "$PHP_BIN" ]]; then
     exit 1
 fi
 
-# A normal Git checkout intentionally does not contain vendor/.
-# Install production dependencies automatically before artisan is executed.
 if [[ ! -f vendor/autoload.php ]]; then
     echo "Composer-Abhängigkeiten fehlen – installiere Produktionsabhängigkeiten ..."
 
@@ -32,6 +30,19 @@ if [[ ! -f vendor/autoload.php ]]; then
         --prefer-dist \
         --optimize-autoloader \
         --no-progress
+fi
+
+if [[ ! -f public/build/manifest.json ]]; then
+    echo "Frontend-Build fehlt – erstelle Vite-Produktionsbuild ..."
+
+    if ! command -v npm >/dev/null 2>&1; then
+        echo "FEHLER: public/build fehlt und npm ist auf diesem SSH-System nicht verfügbar." >&2
+        echo "Nutze in diesem Fall das fertige GitHub-Actions-Deployment-Artefakt." >&2
+        exit 1
+    fi
+
+    npm install --ignore-scripts --no-audit --no-fund
+    npm run build
 fi
 
 mkdir -p \
