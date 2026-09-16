@@ -19,6 +19,7 @@ class World extends Model
         'status',
         'speed_multiplier',
         'simulated_at',
+        'last_simulation_tick_at',
         'starts_at',
         'ends_at',
         'random_seed',
@@ -30,6 +31,7 @@ class World extends Model
         return [
             'speed_multiplier' => 'decimal:2',
             'simulated_at' => 'datetime',
+            'last_simulation_tick_at' => 'datetime',
             'starts_at' => 'datetime',
             'ends_at' => 'datetime',
             'settings' => 'array',
