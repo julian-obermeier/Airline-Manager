@@ -16,6 +16,7 @@ class Flight extends Model
         'airline_id',
         'route_id',
         'aircraft_id',
+        'flight_schedule_id',
         'flight_number',
         'scheduled_departure_at',
         'scheduled_arrival_at',
@@ -57,5 +58,10 @@ class Flight extends Model
     public function aircraft(): BelongsTo
     {
         return $this->belongsTo(Aircraft::class);
+    }
+
+    public function flightSchedule(): BelongsTo
+    {
+        return $this->belongsTo(FlightSchedule::class);
     }
 }
