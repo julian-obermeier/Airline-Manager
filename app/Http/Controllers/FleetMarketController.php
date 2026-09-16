@@ -52,7 +52,7 @@ class FleetMarketController extends Controller
         $type = AircraftType::findOrFail($validated['aircraft_type_id']);
 
         try {
-            $order = $this->procurement->orderNewPurchase($airline, $type, $validated['registration'] ?? null);
+            $order = $this->procurement->orderNewPurchase($airline, $type, $validated['registration'] ?? null, $world->simulated_at ?? now());
         } catch (RuntimeException $exception) {
             throw ValidationException::withMessages(['procurement' => $exception->getMessage()]);
         }
@@ -71,7 +71,7 @@ class FleetMarketController extends Controller
         $type = AircraftType::findOrFail($validated['aircraft_type_id']);
 
         try {
-            $order = $this->procurement->orderLease($airline, $type, (int) $validated['lease_term_months'], $validated['registration'] ?? null);
+            $order = $this->procurement->orderLease($airline, $type, (int) $validated['lease_term_months'], $validated['registration'] ?? null, $world->simulated_at ?? now());
         } catch (RuntimeException $exception) {
             throw ValidationException::withMessages(['procurement' => $exception->getMessage()]);
         }
@@ -88,7 +88,7 @@ class FleetMarketController extends Controller
         ]);
 
         try {
-            $order = $this->procurement->buyUsed($airline, $offer, $validated['registration'] ?? null);
+            $order = $this->procurement->buyUsed($airline, $offer, $validated['registration'] ?? null, $world->simulated_at ?? now());
         } catch (RuntimeException $exception) {
             throw ValidationException::withMessages(['procurement' => $exception->getMessage()]);
         }
