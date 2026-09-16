@@ -10,7 +10,6 @@ use App\Models\LedgerTransaction;
 use App\Models\World;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -31,7 +30,8 @@ class FinanceController extends Controller
             $days = 30;
         }
 
-        $from = now()->subDays($days)->startOfDay();
+        $asOf = ($world->simulated_at ?? now())->copy();
+        $from = $asOf->copy()->subDays($days)->startOfDay();
 
         $accounts = LedgerAccount::query()
             ->withSum('entries as raw_balance_minor', 'amount_minor')
@@ -65,7 +65,7 @@ class FinanceController extends Controller
             ->join('ledger_transactions', 'ledger_transactions.id', '=', 'ledger_entries.ledger_transaction_id')
             ->where('ledger_transactions.world_id', $world->id)
             ->where('ledger_transactions.airline_id', $airline->id)
-            ->where('ledger_transactions.occurred_at', '>=', $from)
+            ->whereBetween('ledger_transactions.occurred_at', [$from, $asOf])
             ->groupBy('ledger_accounts.code', 'ledger_accounts.name', 'ledger_accounts.type')
             ->orderBy('ledger_accounts.type')
             ->orderBy('ledger_accounts.code')
@@ -96,7 +96,7 @@ class FinanceController extends Controller
             ->where('ledger_transactions.world_id', $world->id)
             ->where('ledger_transactions.airline_id', $airline->id)
             ->where('ledger_accounts.code', 'CASH')
-            ->where('ledger_transactions.occurred_at', '>=', $from)
+            ->whereBetween('ledger_transactions.occurred_at', [$from, $asOf])
             ->sum('ledger_entries.amount_minor');
 
         $assetValueMinor = (int) $accountBalances->where('type', 'asset')->sum('display_balance_minor');
@@ -120,6 +120,7 @@ class FinanceController extends Controller
             ->with(['entries.account'])
             ->where('world_id', $world->id)
             ->where('airline_id', $airline->id)
+            ->where('occurred_at', '<=', $asOf)
             ->orderByDesc('occurred_at')
             ->orderByDesc('created_at')
             ->limit(60)
@@ -147,6 +148,7 @@ class FinanceController extends Controller
             'world' => $world,
             'airline' => $airline,
             'days' => $days,
+            'asOf' => $asOf,
             'from' => $from,
             'cashBalanceMinor' => $cashBalanceMinor,
             'cashFlowMinor' => $cashFlowMinor,
