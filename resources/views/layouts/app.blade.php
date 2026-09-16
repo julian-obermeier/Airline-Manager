@@ -23,6 +23,7 @@
         <nav class="nav" aria-label="Hauptnavigation">
             <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('home') }}">Dashboard</a>
             <a class="{{ request()->routeIs('operations.*') ? 'active' : '' }}" href="{{ route('operations.index') }}">Operations</a>
+            <a class="{{ request()->routeIs('fleet-market.*') ? 'active' : '' }}" href="{{ route('fleet-market.index') }}">Flottenmarkt</a>
             <a class="{{ request()->routeIs('schedules.*') ? 'active' : '' }}" href="{{ route('schedules.index') }}">Flugpläne</a>
             <a class="{{ request()->routeIs('maintenance.*') ? 'active' : '' }}" href="{{ route('maintenance.index') }}">Maintenance</a>
             <a class="{{ request()->routeIs('worlds.*') ? 'active' : '' }}" href="{{ route('worlds.index') }}">Spielwelten</a>
