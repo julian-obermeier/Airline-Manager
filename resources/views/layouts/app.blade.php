@@ -22,6 +22,7 @@
 
         <nav class="nav" aria-label="Hauptnavigation">
             <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('home') }}">Dashboard</a>
+            <a class="{{ request()->routeIs('operations.*') ? 'active' : '' }}" href="{{ route('operations.index') }}">Operations</a>
             <a class="{{ request()->routeIs('worlds.*') ? 'active' : '' }}" href="{{ route('worlds.index') }}">Spielwelten</a>
         </nav>
 
