@@ -15,12 +15,12 @@ return new class extends Migration
             $table->string('type', 32)->default('persistent');
             $table->string('status', 32)->default('draft');
             $table->decimal('speed_multiplier', 8, 2)->default(1.00);
-            $table->timestampTz('simulated_at');
-            $table->timestampTz('starts_at')->nullable();
-            $table->timestampTz('ends_at')->nullable();
+            $table->timestamp('simulated_at');
+            $table->timestamp('starts_at')->nullable();
+            $table->timestamp('ends_at')->nullable();
             $table->bigInteger('random_seed');
-            $table->jsonb('settings')->nullable();
-            $table->timestampsTz();
+            $table->json('settings')->nullable();
+            $table->timestamps();
         });
 
         Schema::create('world_memberships', function (Blueprint $table): void {
@@ -28,9 +28,9 @@ return new class extends Migration
             $table->foreignUlid('world_id')->constrained()->cascadeOnDelete();
             $table->foreignId('user_id')->constrained()->cascadeOnDelete();
             $table->string('status', 32)->default('active');
-            $table->timestampTz('joined_at');
-            $table->timestampTz('last_active_at')->nullable();
-            $table->timestampsTz();
+            $table->timestamp('joined_at');
+            $table->timestamp('last_active_at')->nullable();
+            $table->timestamps();
             $table->unique(['world_id', 'user_id']);
         });
     }
