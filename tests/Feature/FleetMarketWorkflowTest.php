@@ -102,7 +102,7 @@ class FleetMarketWorkflowTest extends TestCase
         $this->get(route('fleet-market.index'))
             ->assertOk()
             ->assertSee('Flottenmarkt')
-            ->assertSee('Bestellungen & Verträge')
+            ->assertSeeText('Bestellungen & Verträge')
             ->assertSee('D-AFLE')
             ->assertSee('D-AUSE');
     }
