@@ -25,6 +25,7 @@
             <a class="{{ request()->routeIs('operations.*') ? 'active' : '' }}" href="{{ route('operations.index') }}">Operations</a>
             <a class="{{ request()->routeIs('fleet-market.*') ? 'active' : '' }}" href="{{ route('fleet-market.index') }}">Flottenmarkt</a>
             <a class="{{ request()->routeIs('schedules.*') ? 'active' : '' }}" href="{{ route('schedules.index') }}">Flugpläne</a>
+            <a class="{{ request()->routeIs('airport-operations.*') ? 'active' : '' }}" href="{{ route('airport-operations.index') }}">Airports & Slots</a>
             <a class="{{ request()->routeIs('crew.*') ? 'active' : '' }}" href="{{ route('crew.index') }}">Personal & Crew</a>
             <a class="{{ request()->routeIs('maintenance.*') ? 'active' : '' }}" href="{{ route('maintenance.index') }}">Maintenance</a>
             <a class="{{ request()->routeIs('map.*') ? 'active' : '' }}" href="{{ route('map.index') }}">Weltkarte</a>
