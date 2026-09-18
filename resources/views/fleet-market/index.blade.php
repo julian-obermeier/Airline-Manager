@@ -89,7 +89,7 @@
             @csrf
             <div class="field full">
                 <label for="new_aircraft_type_id">Flugzeugmuster</label>
-                <select id="new_aircraft_type_id" name="aircraft_type_id" required>
+                <select id="new_aircraft_type_id" name="aircraft_type_id" data-searchable data-search-placeholder="Hersteller oder Flugzeugtyp suchen…" required>
                     <option value="">Bitte auswählen</option>
                     @foreach($newTypes as $type)
                         <option value="{{ $type->id }}">{{ $type->manufacturer }} {{ $type->model }} · {{ $type->typical_seats }} Sitze · {{ number_format($type->reference_purchase_price_minor / 100, 0, ',', '.') }} {{ $type->reference_currency }}</option>
@@ -116,7 +116,7 @@
             @csrf
             <div class="field full">
                 <label for="lease_aircraft_type_id">Flugzeugmuster</label>
-                <select id="lease_aircraft_type_id" name="aircraft_type_id" required>
+                <select id="lease_aircraft_type_id" name="aircraft_type_id" data-searchable data-search-placeholder="Leasingmuster suchen…" required>
                     <option value="">Bitte auswählen</option>
                     @foreach($newTypes as $type)
                         @php($monthly = (int) ceil($type->reference_purchase_price_minor * 0.0085))
