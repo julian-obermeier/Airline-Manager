@@ -4,62 +4,103 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <meta name="theme-color" content="#06101d">
+    <meta name="theme-color" content="#f5f7fb">
     <title>@yield('title', 'Airline Empire')</title>
     <link rel="stylesheet" href="{{ asset('assets/airline-empire.css') }}">
 </head>
 <body>
 @if(auth()->check())
+@php
+    $navGroups = [
+        'Übersicht' => [
+            ['route' => 'home', 'match' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'dashboard'],
+            ['route' => 'operations.index', 'match' => 'operations.*', 'label' => 'Operations', 'icon' => 'operations'],
+        ],
+        'Planung & Netzwerk' => [
+            ['route' => 'schedules.index', 'match' => 'schedules.*', 'label' => 'Flugpläne', 'icon' => 'schedule'],
+            ['route' => 'map.index', 'match' => 'map.*', 'label' => 'Weltkarte', 'icon' => 'map'],
+            ['route' => 'airport-operations.index', 'match' => 'airport-operations.*', 'label' => 'Airports & Slots', 'icon' => 'airport'],
+        ],
+        'Flotte & Personal' => [
+            ['route' => 'fleet-market.index', 'match' => 'fleet-market.*', 'label' => 'Flottenmarkt', 'icon' => 'fleet'],
+            ['route' => 'maintenance.index', 'match' => 'maintenance.*', 'label' => 'Maintenance', 'icon' => 'maintenance'],
+            ['route' => 'crew.index', 'match' => 'crew.*', 'label' => 'Personal & Crew', 'icon' => 'crew'],
+        ],
+        'Commercial' => [
+            ['route' => 'revenue-management.index', 'match' => 'revenue-management.*', 'label' => 'Revenue Management', 'icon' => 'revenue'],
+            ['route' => 'market.index', 'match' => 'market.*', 'label' => 'Markt & Konkurrenz', 'icon' => 'market'],
+            ['route' => 'marketing.index', 'match' => 'marketing.*', 'label' => 'Marketing', 'icon' => 'marketing'],
+        ],
+        'Unternehmen' => [
+            ['route' => 'finance.index', 'match' => 'finance.*', 'label' => 'Finanzen', 'icon' => 'finance'],
+            ['route' => 'worlds.index', 'match' => 'worlds.*', 'label' => 'Spielwelten', 'icon' => 'world'],
+        ],
+    ];
+@endphp
 <div class="shell">
     <aside class="sidebar">
         <a class="brand" href="{{ route('home') }}">
-            <div class="brand-mark">AE</div>
-            <div>
+            <div class="brand-mark"><x-icon name="plane" :size="22" /></div>
+            <div class="brand-copy">
                 <strong>Airline Empire</strong>
-                <span>Operations Platform</span>
+                <span>Airline Management</span>
             </div>
         </a>
 
         <nav class="nav" aria-label="Hauptnavigation">
-            <a class="{{ request()->routeIs('dashboard') ? 'active' : '' }}" href="{{ route('home') }}">Dashboard</a>
-            <a class="{{ request()->routeIs('operations.*') ? 'active' : '' }}" href="{{ route('operations.index') }}">Operations</a>
-            <a class="{{ request()->routeIs('fleet-market.*') ? 'active' : '' }}" href="{{ route('fleet-market.index') }}">Flottenmarkt</a>
-            <a class="{{ request()->routeIs('schedules.*') ? 'active' : '' }}" href="{{ route('schedules.index') }}">Flugpläne</a>
-            <a class="{{ request()->routeIs('airport-operations.*') ? 'active' : '' }}" href="{{ route('airport-operations.index') }}">Airports & Slots</a>
-            <a class="{{ request()->routeIs('crew.*') ? 'active' : '' }}" href="{{ route('crew.index') }}">Personal & Crew</a>
-            <a class="{{ request()->routeIs('maintenance.*') ? 'active' : '' }}" href="{{ route('maintenance.index') }}">Maintenance</a>
-            <a class="{{ request()->routeIs('map.*') ? 'active' : '' }}" href="{{ route('map.index') }}">Weltkarte</a>
-            <a class="{{ request()->routeIs('marketing.*') ? 'active' : '' }}" href="{{ route('marketing.index') }}">Marketing</a>
-            <a class="{{ request()->routeIs('revenue-management.*') ? 'active' : '' }}" href="{{ route('revenue-management.index') }}">Revenue Management</a>
-            <a class="{{ request()->routeIs('market.*') ? 'active' : '' }}" href="{{ route('market.index') }}">Markt & Konkurrenz</a>
-            <a class="{{ request()->routeIs('finance.*') ? 'active' : '' }}" href="{{ route('finance.index') }}">Finanzen</a>
-            <a class="{{ request()->routeIs('worlds.*') ? 'active' : '' }}" href="{{ route('worlds.index') }}">Spielwelten</a>
+            @foreach($navGroups as $group => $items)
+                <div class="nav-group">
+                    <div class="nav-group-label">{{ $group }}</div>
+                    <div class="nav-group-items">
+                        @foreach($items as $item)
+                            <a class="nav-link {{ request()->routeIs($item['match']) ? 'active' : '' }}" href="{{ route($item['route']) }}">
+                                <span class="nav-icon"><x-icon :name="$item['icon']" :size="18" /></span>
+                                <span>{{ $item['label'] }}</span>
+                            </a>
+                        @endforeach
+                    </div>
+                </div>
+            @endforeach
         </nav>
 
         <div class="side-spacer"></div>
 
+        <div class="sidebar-status">
+            <span class="sidebar-status-dot"></span>
+            <div>
+                <strong>Simulation aktiv</strong>
+                <small>Shared-Hosting ready</small>
+            </div>
+        </div>
+
         <div class="userbox">
-            <strong>{{ auth()->user()->name }}</strong>
-            <small>{{ '@'.auth()->user()->username }}</small>
+            <div class="user-avatar">{{ strtoupper(substr(auth()->user()->name, 0, 1)) }}</div>
+            <div class="user-copy">
+                <strong>{{ auth()->user()->name }}</strong>
+                <small>{{ '@'.auth()->user()->username }}</small>
+            </div>
             <form method="post" action="{{ route('logout') }}">
                 @csrf
-                <button class="button ghost logout" type="submit">Abmelden</button>
+                <button class="icon-button" type="submit" title="Abmelden" aria-label="Abmelden"><x-icon name="logout" :size="18" /></button>
             </form>
         </div>
     </aside>
 
     <main class="content">
         <header class="topbar">
-            <div>
+            <div class="page-heading">
                 <span class="eyebrow">@yield('eyebrow', 'AIRLINE OPERATIONS')</span>
                 <h1>@yield('heading', 'Command Center')</h1>
-                @hasSection('subheading')<div class="muted">@yield('subheading')</div>@endif
+                @hasSection('subheading')<div class="muted page-subheading">@yield('subheading')</div>@endif
             </div>
-            <span class="status-pill">System online</span>
+            <div class="topbar-actions">
+                <span class="status-pill"><span class="status-dot"></span>System online</span>
+                <a class="icon-button" href="{{ route('map.index') }}" title="Weltkarte"><x-icon name="map" :size="18" /></a>
+            </div>
         </header>
 
         @if(session('success'))
-            <div class="flash">{{ session('success') }}</div>
+            <div class="flash"><x-icon name="status" :size="18" /><span>{{ session('success') }}</span></div>
         @endif
 
         @if($errors->any())
