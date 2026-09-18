@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class AirlineRoute extends Model
 {
@@ -51,6 +52,16 @@ class AirlineRoute extends Model
     public function destination(): BelongsTo
     {
         return $this->belongsTo(Airport::class, 'destination_airport_id');
+    }
+
+    public function commercialMetric(): HasOne
+    {
+        return $this->hasOne(RouteCommercialMetric::class, 'route_id');
+    }
+
+    public function marketingCampaigns(): HasMany
+    {
+        return $this->hasMany(MarketingCampaign::class, 'route_id');
     }
 
     public function flights(): HasMany
