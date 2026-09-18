@@ -79,6 +79,11 @@ class Airline extends Model
         return $this->hasMany(MarketingCampaign::class);
     }
 
+    public function routeMarketPositions(): HasMany
+    {
+        return $this->hasMany(RouteMarketPosition::class);
+    }
+
     public function airportStations(): HasMany
     {
         return $this->hasMany(AirlineAirportStation::class);
