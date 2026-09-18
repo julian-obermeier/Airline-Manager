@@ -269,7 +269,7 @@
 
     <article class="card">
         <div class="section-title">
-            <div><span class="eyebrow">FIXED COMMITMENTS</span><h3>Monatliche Verpflichtungen</h3></div>
+            <div><span class="eyebrow">FIXED COMMITMENTS · LEASINGVERPFLICHTUNGEN</span><h3>Monatliche Verpflichtungen</h3></div>
             <span class="badge">{{ number_format($monthlyFixedCommitmentMinor / 100, 0, ',', '.') }} {{ $airline->base_currency }}</span>
         </div>
         <div class="list">
@@ -335,6 +335,17 @@
                             {{ $transaction['occurred_at']->timezone('Europe/Berlin')->format('d.m.Y H:i') }} ·
                             {{ $referenceLabels[$transaction['reference_type']] ?? ($transaction['reference_type'] ?: 'System') }}
                         </div>
+                        <details style="margin-top:5px">
+                            <summary class="route-meta" style="cursor:pointer">Buchungssatz anzeigen</summary>
+                            <div style="margin-top:5px">
+                                @foreach($transaction['entries'] as $entry)
+                                    <div class="route-meta">
+                                        <strong>{{ $entry['code'] }}</strong> · {{ $entry['account'] }} ·
+                                        {{ $entry['amount_minor'] >= 0 ? '+' : '' }}{{ number_format($entry['amount_minor'] / 100, 2, ',', '.') }}
+                                    </div>
+                                @endforeach
+                            </div>
+                        </details>
                     </div>
                     <div style="text-align:right">
                         <strong class="{{ $transaction['cash_effect_minor'] >= 0 ? 'kpi-positive' : 'kpi-negative' }}">
