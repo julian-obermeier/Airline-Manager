@@ -33,22 +33,26 @@
 @endphp
 
 <section class="grid grid-4">
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="maintenance" :size="19" /></div>
         <span class="eyebrow">TECHNICAL STATUS</span>
         <strong>{{ $fleet->count() - $groundedCount - $maintenanceCount }} / {{ $fleet->count() }}</strong>
         <small>Flugzeuge technisch verfügbar</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="status" :size="19" /></div>
         <span class="eyebrow">WARTUNGSBEDARF</span>
         <strong>{{ $dueCount }}</strong>
         <small>Fällige oder auffällige Flugzeuge</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="plane" :size="19" /></div>
         <span class="eyebrow">GROUNDING</span>
         <strong>{{ $groundedCount }}</strong>
         <small>Automatisch gesperrte Flugzeuge</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="cash" :size="19" /></div>
         <span class="eyebrow">LIQUIDITÄT</span>
         <strong class="kpi-positive">{{ number_format($cashBalanceMinor / 100, 2, ',', '.') }} {{ $airline->base_currency }}</strong>
         <small>Wartungen werden bei Abschluss gebucht</small>
