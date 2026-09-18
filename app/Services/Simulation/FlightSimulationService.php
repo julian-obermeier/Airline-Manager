@@ -19,6 +19,7 @@ class FlightSimulationService
     public function __construct(
         private readonly RevenueManagementService $revenueManagement,
         private readonly FlightScheduleService $flightSchedules,
+        private readonly CrewService $crewService,
     ) {
     }
 
@@ -38,6 +39,7 @@ class FlightSimulationService
             'departed' => 0,
             'in_air' => 0,
             'completed' => 0,
+            'crew_cancelled' => 0,
         ];
 
         World::query()
@@ -114,6 +116,14 @@ class FlightSimulationService
         $boardingAt = $flight->scheduled_departure_at->copy()->subMinutes(config('simulation.boarding_minutes', 30));
         $departureAt = $flight->scheduled_departure_at->copy()->addMinutes($flight->delay_minutes);
         $arrivalAt = $flight->scheduled_arrival_at->copy()->addMinutes($flight->delay_minutes);
+
+        if (in_array($flight->status, ['scheduled', 'boarding'], true)
+            && $simulationNow->greaterThanOrEqualTo($departureAt)
+            && ! $this->crewService->readyForDeparture($flight)) {
+            $this->crewService->cancelForShortage($flight);
+
+            return 'crew_cancelled';
+        }
 
         if ($simulationNow->greaterThanOrEqualTo($arrivalAt)) {
             return $this->completeFlight($flight, $departureAt, $arrivalAt) ? 'completed' : null;
@@ -439,6 +449,7 @@ class FlightSimulationService
                 ])->save();
             }
 
+            $this->crewService->completeFlight($locked);
             $completed = true;
         });
 
@@ -547,7 +558,7 @@ class FlightSimulationService
             'ledger_transaction_id' => $transaction->id,
             'ledger_account_id' => $operatingExpense->id,
             'amount_minor' => $economics['operating_cost_minor'],
-            'memo' => 'Handling, Crew und operative Kosten',
+            'memo' => 'Handling, Flughafen- und operative Kosten',
         ]);
     }
 
