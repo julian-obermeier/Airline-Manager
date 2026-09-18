@@ -149,5 +149,38 @@ class GameBootstrapSeeder extends Seeder
                 ]
             );
         }
+
+        $legacyLocations = [$fra->id, $muc->id, $ams->id];
+
+        AircraftType::query()
+            ->where('production_status', 'out_of_production')
+            ->orderBy('manufacturer')
+            ->orderBy('model')
+            ->get()
+            ->each(function (AircraftType $type, int $index) use ($world, $legacyLocations): void {
+                $serialCode = preg_replace('/[^A-Z0-9]/', '', strtoupper((string) ($type->icao_type_code ?: $type->model)));
+                $serialNumber = 'USED-'.substr($serialCode ?: 'TYPE', 0, 8).'-LEGACY-001';
+                $referencePrice = max(100000000, (int) $type->reference_purchase_price_minor);
+                $priceFactor = 0.48 + (($index % 5) * 0.04);
+
+                AircraftMarketOffer::query()->firstOrCreate(
+                    ['world_id' => $world->id, 'serial_number' => $serialNumber],
+                    [
+                        'aircraft_type_id' => $type->id,
+                        'location_airport_id' => $legacyLocations[$index % count($legacyLocations)],
+                        'manufactured_on' => now()->subYears(8 + ($index % 14))->toDateString(),
+                        'flight_hours' => 18000 + ($index * 1350),
+                        'flight_cycles' => 8200 + ($index * 610),
+                        'condition_percent' => max(74, 91 - (($index % 7) * 2.1)),
+                        'price_minor' => (int) round($referencePrice * $priceFactor),
+                        'currency' => 'EUR',
+                        'status' => 'available',
+                        'metadata' => [
+                            'source' => 'bootstrap_legacy_used_market',
+                            'catalogue_model' => $type->model,
+                        ],
+                    ]
+                );
+            });
     }
 }
