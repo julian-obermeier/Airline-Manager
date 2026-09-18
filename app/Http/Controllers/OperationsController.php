@@ -12,6 +12,7 @@ use App\Models\LedgerAccount;
 use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
 use App\Models\World;
+use App\Services\Commercial\MarketingService;
 use App\Services\Commercial\RevenueManagementService;
 use App\Services\Operations\AirportOperationsService;
 use App\Services\Operations\CrewService;
@@ -31,6 +32,7 @@ class OperationsController extends Controller
         private readonly MaintenanceService $maintenance,
         private readonly CrewService $crewService,
         private readonly AirportOperationsService $airportOperations,
+        private readonly MarketingService $marketing,
     ) {
     }
 
@@ -260,7 +262,7 @@ class OperationsController extends Controller
             $destination->id === $airline->home_airport_id ? 'base' : 'outstation'
         );
 
-        AirlineRoute::create([
+        $newRoute = AirlineRoute::create([
             'world_id' => $world->id,
             'airline_id' => $airline->id,
             'origin_airport_id' => $origin->id,
@@ -275,7 +277,9 @@ class OperationsController extends Controller
             ],
         ]);
 
-        return redirect()->route('operations.index')->with('success', 'Route wurde angelegt. Standardtarife und Marktnachfrage wurden berechnet.');
+        $this->marketing->ensureRouteMetric($newRoute);
+
+        return redirect()->route('operations.index')->with('success', 'Route wurde angelegt. Standardtarife, Marktnachfrage und Streckenbekanntheit wurden initialisiert.');
     }
 
     public function updateRouteFares(Request $request, AirlineRoute $route): RedirectResponse
