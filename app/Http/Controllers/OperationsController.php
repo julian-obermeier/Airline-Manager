@@ -3,14 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Aircraft;
-use App\Models\AircraftType;
 use App\Models\Airline;
 use App\Models\AirlineRoute;
 use App\Models\Airport;
 use App\Models\Flight;
-use App\Models\LedgerAccount;
-use App\Models\LedgerEntry;
-use App\Models\LedgerTransaction;
 use App\Models\World;
 use App\Services\Commercial\MarketingService;
 use App\Services\Commercial\RevenueManagementService;
@@ -21,7 +17,6 @@ use Carbon\Carbon;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
@@ -69,10 +64,6 @@ class OperationsController extends Controller
             ->limit(30)
             ->get();
 
-        $routePricing = $routes->mapWithKeys(fn (AirlineRoute $route): array => [
-            $route->id => $this->revenueManagement->routeFares($route, $airline->business_model),
-        ]);
-
         $crewSnapshots = $flights->mapWithKeys(fn (Flight $flight): array => [
             $flight->id => $this->crewService->staffingSnapshot($flight),
         ]);
@@ -81,141 +72,12 @@ class OperationsController extends Controller
             'world' => $world,
             'airline' => $airline,
             'cashBalanceMinor' => $this->cashBalanceMinor($airline),
-            'aircraftTypes' => AircraftType::query()
-                ->whereNotNull('reference_purchase_price_minor')
-                ->orderBy('manufacturer')
-                ->orderBy('model')
-                ->get(),
             'airports' => Airport::query()->orderBy('country_code')->orderBy('city')->get(),
             'fleet' => $fleet,
             'routes' => $routes,
-            'routePricing' => $routePricing,
             'flights' => $flights,
             'crewSnapshots' => $crewSnapshots,
         ]);
-    }
-
-    public function purchaseAircraft(Request $request): RedirectResponse
-    {
-        $context = $this->activeContext($request);
-
-        if (! $context) {
-            return redirect()->route('home');
-        }
-
-        [$world, $airline] = $context;
-
-        $validated = $request->validate([
-            'aircraft_type_id' => ['required', 'string', 'exists:aircraft_types,id'],
-            'registration' => [
-                'nullable',
-                'string',
-                'max:16',
-                'regex:/^[A-Za-z0-9-]+$/',
-                Rule::unique('aircraft', 'registration')->where(fn ($query) => $query->where('world_id', $world->id)),
-            ],
-        ]);
-
-        $type = AircraftType::findOrFail($validated['aircraft_type_id']);
-        $priceMinor = (int) $type->reference_purchase_price_minor;
-
-        if ($priceMinor <= 0) {
-            throw ValidationException::withMessages([
-                'aircraft_type_id' => 'Für dieses Flugzeugmuster ist aktuell kein Kaufpreis hinterlegt.',
-            ]);
-        }
-
-        if ($this->cashBalanceMinor($airline) < $priceMinor) {
-            throw ValidationException::withMessages([
-                'aircraft_type_id' => 'Deine Airline verfügt nicht über genügend Liquidität für diesen Kauf.',
-            ]);
-        }
-
-        $registration = filled($validated['registration'] ?? null)
-            ? strtoupper($validated['registration'])
-            : $this->generateRegistration($world, $airline);
-
-        $totalSeats = max(1, (int) ($type->typical_seats ?? 1));
-        $cabins = $this->revenueManagement->cabinLayout($totalSeats, $airline->business_model);
-
-        DB::transaction(function () use ($world, $airline, $type, $priceMinor, $registration, $totalSeats, $cabins): void {
-            $aircraft = Aircraft::create([
-                'world_id' => $world->id,
-                'airline_id' => $airline->id,
-                'aircraft_type_id' => $type->id,
-                'current_airport_id' => $airline->home_airport_id,
-                'registration' => $registration,
-                'serial_number' => null,
-                'manufactured_on' => null,
-                'engine_variant' => null,
-                'flight_hours' => 0,
-                'flight_cycles' => 0,
-                'condition_percent' => 100,
-                'status' => 'available',
-                'ownership_type' => 'owned',
-                'acquisition_price_minor' => $priceMinor,
-                'currency' => $airline->base_currency,
-                'configuration' => [
-                    'seats' => $totalSeats,
-                    'cabins' => $cabins,
-                ],
-                'metadata' => [
-                    'acquired_via' => 'new_aircraft_market',
-                    'maintenance' => [
-                        'a_check_baseline_hours' => 0,
-                        'a_check_baseline_cycles' => 0,
-                        'c_check_baseline_hours' => 0,
-                        'c_check_baseline_cycles' => 0,
-                        'grounded_by_system' => false,
-                    ],
-                ],
-            ]);
-
-            $cash = LedgerAccount::query()
-                ->where('airline_id', $airline->id)
-                ->where('code', 'CASH')
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            $fleetAsset = LedgerAccount::query()->firstOrCreate(
-                ['airline_id' => $airline->id, 'code' => 'FLEET'],
-                [
-                    'world_id' => $world->id,
-                    'name' => 'Flottenvermögen',
-                    'type' => 'asset',
-                    'currency' => $airline->base_currency,
-                    'is_system' => true,
-                ]
-            );
-
-            $transaction = LedgerTransaction::create([
-                'world_id' => $world->id,
-                'airline_id' => $airline->id,
-                'idempotency_key' => 'aircraft-purchase:'.$aircraft->id,
-                'reference_type' => 'aircraft_purchase',
-                'reference_id' => $aircraft->id,
-                'description' => 'Kauf '.$type->manufacturer.' '.$type->model.' · '.$registration,
-                'occurred_at' => now(),
-                'posted_at' => now(),
-                'metadata' => ['aircraft_type_id' => $type->id],
-            ]);
-
-            LedgerEntry::create([
-                'ledger_transaction_id' => $transaction->id,
-                'ledger_account_id' => $fleetAsset->id,
-                'amount_minor' => $priceMinor,
-                'memo' => 'Aktivierung Flugzeug',
-            ]);
-
-            LedgerEntry::create([
-                'ledger_transaction_id' => $transaction->id,
-                'ledger_account_id' => $cash->id,
-                'amount_minor' => -$priceMinor,
-                'memo' => 'Kaufpreis Flugzeug',
-            ]);
-        });
-
-        return redirect()->route('operations.index')->with('success', 'Flugzeug wurde gekauft und deiner Flotte hinzugefügt.');
     }
 
     public function storeRoute(Request $request): RedirectResponse
@@ -281,37 +143,6 @@ class OperationsController extends Controller
         $this->marketing->ensureRouteMetric($newRoute);
 
         return redirect()->route('operations.index')->with('success', 'Route wurde angelegt. Standardtarife, Marktnachfrage und Streckenbekanntheit wurden initialisiert.');
-    }
-
-    public function updateRouteFares(Request $request, AirlineRoute $route): RedirectResponse
-    {
-        $context = $this->activeContext($request);
-
-        if (! $context) {
-            return redirect()->route('home');
-        }
-
-        [$world, $airline] = $context;
-
-        abort_unless($route->world_id === $world->id && $route->airline_id === $airline->id, 404);
-
-        $validated = $request->validate([
-            'economy_fare' => ['required', 'numeric', 'min:10', 'max:5000'],
-            'business_fare' => ['required', 'numeric', 'min:0', 'max:10000'],
-            'first_fare' => ['required', 'numeric', 'min:0', 'max:20000'],
-        ]);
-
-        $settings = $route->settings ?? [];
-        $settings['fares'] = [
-            'economy_minor' => (int) round(((float) $validated['economy_fare']) * 100),
-            'business_minor' => (int) round(((float) $validated['business_fare']) * 100),
-            'first_minor' => (int) round(((float) $validated['first_fare']) * 100),
-        ];
-        $settings['pricing_updated_at'] = now()->toIso8601String();
-
-        $route->forceFill(['settings' => $settings])->save();
-
-        return redirect()->route('operations.index')->with('success', 'Basistarife wurden gespeichert. Neue Flüge übernehmen sie als Ausgangspunkt für das Revenue Management.');
     }
 
     public function scheduleFlight(Request $request): RedirectResponse
@@ -504,28 +335,4 @@ class OperationsController extends Controller
         return round($earthRadiusKm * 2 * atan2(sqrt($a), sqrt(1 - $a)), 2);
     }
 
-    private function generateRegistration(World $world, Airline $airline): string
-    {
-        $prefix = match ($airline->country_code) {
-            'DE' => 'D-A',
-            'AT' => 'OE-L',
-            'CH' => 'HB-J',
-            'NL' => 'PH-',
-            'GB' => 'G-',
-            default => strtoupper($airline->country_code).'-',
-        };
-
-        do {
-            $letters = '';
-            $length = $airline->country_code === 'GB' ? 4 : 3;
-
-            for ($i = 0; $i < $length; $i++) {
-                $letters .= chr(random_int(65, 90));
-            }
-
-            $registration = $prefix.$letters;
-        } while (Aircraft::query()->where('world_id', $world->id)->where('registration', $registration)->exists());
-
-        return $registration;
-    }
 }
