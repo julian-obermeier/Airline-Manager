@@ -7,22 +7,26 @@
 
 @section('content')
 <section class="grid grid-4">
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="schedule" :size="19" /></div>
         <span class="eyebrow">PLÄNE</span>
         <strong>{{ $flightSchedules->count() }}</strong>
         <small>Gespeicherte Umläufe</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="status" :size="19" /></div>
         <span class="eyebrow">AKTIV</span>
         <strong>{{ $flightSchedules->where('status', 'active')->count() }}</strong>
         <small>Automatisch fortgeschrieben</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="world" :size="19" /></div>
         <span class="eyebrow">VORAUSPLANUNG</span>
         <strong>28 Tage</strong>
         <small>Rollierender Planungshorizont</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="operations" :size="19" /></div>
         <span class="eyebrow">TURNAROUND</span>
         <strong>Typabhängig</strong>
         <small>Mindestbodenzeit wird geprüft</small>
