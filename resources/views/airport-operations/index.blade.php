@@ -48,11 +48,7 @@
                     <label for="airport_id">Flughafen</label>
                     <select id="airport_id" name="airport_id" required>
                         <option value="">Bitte auswählen</option>
-                        @foreach($airports as $airport)
-                            <option value="{{ $airport->id }}" @selected(old('airport_id') === $airport->id)>
-                                {{ $airport->iata_code }} / {{ $airport->icao_code }} · {{ $airport->city }} · {{ $airport->name }}
-                            </option>
-                        @endforeach
+                        <x-airport-options :airports="$airports" :selected="old('airport_id')" />
                     </select>
                     <span class="help">Für neue Routen werden fehlende Stationen automatisch eröffnet. Hier kannst du Stationen bereits vorher aufbauen.</span>
                 </div>
