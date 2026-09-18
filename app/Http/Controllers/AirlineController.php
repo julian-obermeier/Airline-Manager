@@ -8,6 +8,7 @@ use App\Models\LedgerAccount;
 use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
 use App\Models\World;
+use App\Services\Commercial\MarketingService;
 use App\Services\Operations\AirportOperationsService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,8 +19,10 @@ use Illuminate\View\View;
 
 class AirlineController extends Controller
 {
-    public function __construct(private readonly AirportOperationsService $airportOperations)
-    {
+    public function __construct(
+        private readonly AirportOperationsService $airportOperations,
+        private readonly MarketingService $marketing,
+    ) {
     }
 
     public function create(Request $request): View|RedirectResponse
@@ -159,6 +162,7 @@ class AirlineController extends Controller
             ]);
 
             $this->airportOperations->ensureStation($airline, $airport, 'base');
+            $this->marketing->ensureProfile($airline);
         });
 
         return redirect()->route('dashboard')->with('success', 'Deine Airline wurde gegründet.');
