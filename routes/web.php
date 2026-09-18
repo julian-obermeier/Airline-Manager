@@ -12,6 +12,7 @@ use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\MarketController;
 use App\Http\Controllers\OperationsController;
+use App\Http\Controllers\RevenueManagementController;
 use App\Http\Controllers\SimulationController;
 use App\Http\Controllers\WorldMapController;
 use Illuminate\Support\Facades\Route;
@@ -67,6 +68,10 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/maintenance', [MaintenanceController::class, 'index'])->name('maintenance.index');
     Route::post('/maintenance', [MaintenanceController::class, 'store'])->name('maintenance.store');
     Route::patch('/maintenance/{event}/cancel', [MaintenanceController::class, 'cancel'])->name('maintenance.cancel');
+
+    Route::get('/revenue-management', [RevenueManagementController::class, 'index'])->name('revenue-management.index');
+    Route::patch('/revenue-management/routes/{route}/policy', [RevenueManagementController::class, 'updatePolicy'])->name('revenue-management.policy.update');
+    Route::post('/revenue-management/flights/{flight}/reprice', [RevenueManagementController::class, 'reprice'])->name('revenue-management.flights.reprice');
 
     Route::get('/market', [MarketController::class, 'index'])->name('market.index');
 
