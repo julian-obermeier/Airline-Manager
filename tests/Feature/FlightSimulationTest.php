@@ -5,6 +5,8 @@ namespace Tests\Feature;
 use App\Models\AircraftProcurement;
 use App\Models\AircraftType;
 use App\Models\Airline;
+use App\Models\CrewMember;
+use App\Models\CrewQualification;
 use App\Models\Airport;
 use App\Models\Flight;
 use App\Models\LedgerTransaction;
