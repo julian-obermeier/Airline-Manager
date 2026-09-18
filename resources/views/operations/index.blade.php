@@ -95,22 +95,14 @@
                 <label for="origin_airport_id">Startflughafen</label>
                 <select id="origin_airport_id" name="origin_airport_id" required>
                     <option value="">Bitte auswählen</option>
-                    @foreach($airports as $airport)
-                        <option value="{{ $airport->id }}" @selected(old('origin_airport_id', $airline->home_airport_id) === $airport->id)>
-                            {{ $airport->iata_code }} · {{ $airport->city }} · {{ $airport->name }}
-                        </option>
-                    @endforeach
+                    <x-airport-options :airports="$airports" :selected="old('origin_airport_id', $airline->home_airport_id)" />
                 </select>
             </div>
             <div class="field full">
                 <label for="destination_airport_id">Zielflughafen</label>
                 <select id="destination_airport_id" name="destination_airport_id" required>
                     <option value="">Bitte auswählen</option>
-                    @foreach($airports as $airport)
-                        <option value="{{ $airport->id }}" @selected(old('destination_airport_id') === $airport->id)>
-                            {{ $airport->iata_code }} · {{ $airport->city }} · {{ $airport->name }}
-                        </option>
-                    @endforeach
+                    <x-airport-options :airports="$airports" :selected="old('destination_airport_id')" />
                 </select>
                 <span class="help">Distanz, Blockzeit, Stationsbedarf und Nachfrage werden automatisch berechnet.</span>
             </div>
