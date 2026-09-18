@@ -32,8 +32,8 @@ if [[ ! -f vendor/autoload.php ]]; then
         --no-progress
 fi
 
-if [[ ! -f public/assets/airline-empire.css ]]; then
-    echo "FEHLER: Das Produktions-CSS fehlt. Führe zuerst 'git pull origin main' aus." >&2
+if [[ ! -f public/assets/airline-empire.css || ! -f public/assets/airline-empire.js ]]; then
+    echo "FEHLER: Produktions-CSS oder UI-JavaScript fehlt. Führe zuerst 'git pull origin main' aus." >&2
     exit 1
 fi
 
