@@ -172,6 +172,7 @@
         </div>
         <div class="split-actions">
             <span class="badge">{{ $fleet->count() }} Flugzeuge</span>
+            <a class="button ghost" href="{{ route('fleet.index') }}"><x-icon name="fleet" :size="15" /> Meine Flotte</a>
             <a class="button ghost" href="{{ route('fleet-market.index') }}">Flotte erweitern <x-icon name="arrow" :size="15" /></a>
         </div>
     </div>
