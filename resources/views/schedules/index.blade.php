@@ -49,7 +49,7 @@
 
             <div class="field">
                 <label for="aircraft_id">Flugzeug</label>
-                <select id="aircraft_id" name="aircraft_id" required>
+                <select id="aircraft_id" name="aircraft_id" data-searchable data-search-placeholder="Flugzeug suchen…" required>
                     <option value="">Bitte auswählen</option>
                     @foreach($fleet as $aircraft)
                         <option value="{{ $aircraft->id }}" @selected(old('aircraft_id') === $aircraft->id)>
@@ -61,7 +61,7 @@
 
             <div class="field">
                 <label for="outbound_route_id">Hinroute</label>
-                <select id="outbound_route_id" name="outbound_route_id" required>
+                <select id="outbound_route_id" name="outbound_route_id" data-searchable data-search-placeholder="Hinroute suchen…" required>
                     <option value="">Bitte auswählen</option>
                     @foreach($routes as $route)
                         <option value="{{ $route->id }}" @selected(old('outbound_route_id') === $route->id)>
@@ -73,7 +73,7 @@
 
             <div class="field">
                 <label for="return_route_id">Rückroute</label>
-                <select id="return_route_id" name="return_route_id" required>
+                <select id="return_route_id" name="return_route_id" data-searchable data-search-placeholder="Rückroute suchen…" required>
                     <option value="">Bitte auswählen</option>
                     @foreach($routes as $route)
                         <option value="{{ $route->id }}" @selected(old('return_route_id') === $route->id)>
