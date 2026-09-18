@@ -63,6 +63,7 @@ fi
 "$PHP_BIN" artisan optimize:clear
 "$PHP_BIN" artisan migrate --force
 "$PHP_BIN" artisan db:seed --force
+"$PHP_BIN" artisan airline:airport-backfill
 "$PHP_BIN" artisan config:cache
 "$PHP_BIN" artisan route:cache
 "$PHP_BIN" artisan view:cache
