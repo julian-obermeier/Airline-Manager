@@ -20,11 +20,7 @@
                 <label for="home_airport_id">Heimatflughafen</label>
                 <select id="home_airport_id" name="home_airport_id" required>
                     <option value="">Bitte auswählen</option>
-                    @foreach($airports as $airport)
-                        <option value="{{ $airport->id }}" @selected(old('home_airport_id') === $airport->id)>
-                            {{ $airport->iata_code }} / {{ $airport->icao_code }} · {{ $airport->city }} · {{ $airport->name }}
-                        </option>
-                    @endforeach
+                    <x-airport-options :airports="$airports" :selected="old('home_airport_id')" />
                 </select>
             </div>
 
