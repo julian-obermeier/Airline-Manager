@@ -34,7 +34,17 @@ class FleetMarketController extends Controller
             'world' => $world,
             'airline' => $airline,
             'cashBalanceMinor' => $this->procurement->cashBalanceMinor($airline),
-            'types' => AircraftType::query()->whereNotNull('reference_purchase_price_minor')->orderBy('manufacturer')->orderBy('model')->get(),
+            'types' => AircraftType::query()
+                ->whereNotNull('reference_purchase_price_minor')
+                ->orderBy('manufacturer')
+                ->orderBy('model')
+                ->get(),
+            'newTypes' => AircraftType::query()
+                ->whereNotNull('reference_purchase_price_minor')
+                ->where('production_status', 'active')
+                ->orderBy('manufacturer')
+                ->orderBy('model')
+                ->get(),
             'usedOffers' => AircraftMarketOffer::query()->with(['type', 'locationAirport'])
                 ->where('world_id', $world->id)->where('status', 'available')->orderBy('price_minor')->get(),
             'procurements' => AircraftProcurement::query()->with(['type', 'marketOffer', 'deliveredAircraft'])
@@ -50,6 +60,11 @@ class FleetMarketController extends Controller
             'registration' => ['nullable', 'string', 'max:16', 'regex:/^[A-Za-z0-9-]+$/'],
         ]);
         $type = AircraftType::findOrFail($validated['aircraft_type_id']);
+        if ($type->production_status !== 'active') {
+            throw ValidationException::withMessages([
+                'aircraft_type_id' => 'Dieses Flugzeugmuster wird nicht mehr als Neuflugzeug angeboten.',
+            ]);
+        }
 
         try {
             $order = $this->procurement->orderNewPurchase($airline, $type, $validated['registration'] ?? null, $world->simulated_at ?? now());
@@ -69,6 +84,11 @@ class FleetMarketController extends Controller
             'lease_term_months' => ['required', 'integer', Rule::in([36, 60, 84])],
         ]);
         $type = AircraftType::findOrFail($validated['aircraft_type_id']);
+        if ($type->production_status !== 'active') {
+            throw ValidationException::withMessages([
+                'aircraft_type_id' => 'Dieses Flugzeugmuster steht nicht für neue Operating-Lease-Verträge zur Verfügung.',
+            ]);
+        }
 
         try {
             $order = $this->procurement->orderLease($airline, $type, (int) $validated['lease_term_months'], $validated['registration'] ?? null, $world->simulated_at ?? now());
