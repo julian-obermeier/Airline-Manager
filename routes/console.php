@@ -2,6 +2,7 @@
 
 use App\Models\Airline;
 use App\Models\World;
+use App\Services\Commercial\MarketingService;
 use App\Services\Operations\AirportOperationsService;
 use App\Services\Operations\CrewService;
 use App\Services\Operations\FlightLocationGuardService;
@@ -100,3 +101,24 @@ Artisan::command('airline:airport-backfill', function (AirportOperationsService 
         [[$summary['airlines'], $summary['stations'], $summary['slots'], $summary['unavailable']]]
     );
 })->purpose('Backfill stations and slots for existing airlines and future flights');
+
+
+Artisan::command('airline:marketing-backfill', function (MarketingService $marketing): void {
+    $summary = ['airlines' => 0, 'route_metrics_created' => 0];
+
+    Airline::query()
+        ->with('world')
+        ->where('status', 'active')
+        ->orderBy('id')
+        ->each(function (Airline $airline) use ($marketing, &$summary): void {
+            $summary['airlines']++;
+            $result = $marketing->backfillAirline($airline);
+            $summary['route_metrics_created'] += (int) ($result['route_metrics_created'] ?? 0);
+        });
+
+    $this->info('Marketing and reputation backfill completed.');
+    $this->table(
+        ['Airlines', 'Route metrics created'],
+        [[$summary['airlines'], $summary['route_metrics_created']]]
+    );
+})->purpose('Backfill reputation profiles and route commercial metrics');
