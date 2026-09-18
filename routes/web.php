@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AirlineController;
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CrewController;
 use App\Http\Controllers\FinanceController;
 use App\Http\Controllers\FleetMarketController;
 use App\Http\Controllers\FlightScheduleController;
