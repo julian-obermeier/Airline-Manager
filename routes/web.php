@@ -14,6 +14,7 @@ use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\MarketController;
 use App\Http\Controllers\OperationsController;
 use App\Http\Controllers\RevenueManagementController;
+use App\Http\Controllers\RoutePlannerController;
 use App\Http\Controllers\SimulationController;
 use App\Http\Controllers\WorldMapController;
 use Illuminate\Support\Facades\Route;
@@ -54,6 +55,8 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/fleet-market/new', [FleetMarketController::class, 'orderNew'])->name('fleet-market.new');
     Route::post('/fleet-market/lease', [FleetMarketController::class, 'orderLease'])->name('fleet-market.lease');
     Route::post('/fleet-market/used/{offer}', [FleetMarketController::class, 'buyUsed'])->name('fleet-market.used');
+
+    Route::get('/route-planner', [RoutePlannerController::class, 'index'])->name('route-planner.index');
 
     Route::get('/schedules', [FlightScheduleController::class, 'index'])->name('schedules.index');
     Route::post('/schedules', [FlightScheduleController::class, 'store'])->name('schedules.store');
