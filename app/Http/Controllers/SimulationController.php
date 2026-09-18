@@ -18,6 +18,7 @@ class SimulationController extends Controller
         MaintenanceService $maintenance,
         ProcurementService $procurement,
         FlightLocationGuardService $locationGuard,
+        CrewService $crewService,
     ): JsonResponse {
         $configuredToken = (string) config('simulation.cron_token');
         $providedToken = (string) $request->query('token');
@@ -38,11 +39,15 @@ class SimulationController extends Controller
             'lease_payments' => 0,
             'leases_ended' => 0,
         ];
+        $crewSummary = [
+            'payroll_runs' => 0,
+            'salary_minor' => 0,
+        ];
 
         World::query()
             ->where('status', 'active')
             ->orderBy('id')
-            ->each(function (World $world) use ($maintenance, $procurement, &$maintenanceSummary, &$procurementSummary): void {
+            ->each(function (World $world) use ($maintenance, $procurement, $crewService, &$maintenanceSummary, &$procurementSummary, &$crewSummary): void {
                 $world->refresh();
                 $simulationNow = $world->simulated_at ?? now();
 
@@ -55,6 +60,11 @@ class SimulationController extends Controller
                 foreach ($procurementSummary as $key => $value) {
                     $procurementSummary[$key] += (int) ($procurementResult[$key] ?? 0);
                 }
+
+                $payrollResult = $crewService->processPayroll($world, $simulationNow);
+                foreach ($crewSummary as $key => $value) {
+                    $crewSummary[$key] += (int) ($payrollResult[$key] ?? 0);
+                }
             });
 
         return response()->json([
@@ -63,6 +73,7 @@ class SimulationController extends Controller
             'tick' => $tick,
             'maintenance' => $maintenanceSummary,
             'procurement' => $procurementSummary,
+            'crew' => $crewSummary,
             'executed_at' => now()->toIso8601String(),
         ]);
     }
