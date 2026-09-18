@@ -4,6 +4,7 @@ use App\Models\Airline;
 use App\Models\World;
 use App\Services\Commercial\MarketCompetitionService;
 use App\Services\Commercial\MarketingService;
+use App\Services\Commercial\RevenueManagementService;
 use App\Services\Operations\AirportOperationsService;
 use App\Services\Operations\CrewService;
 use App\Services\Operations\FlightLocationGuardService;
@@ -147,3 +148,32 @@ Artisan::command('airline:competition-backfill', function (MarketCompetitionServ
         [[$summary['airlines'], $summary['markets']]]
     );
 })->purpose('Backfill current route competition scores and market shares');
+
+
+Artisan::command('airline:revenue-backfill', function (RevenueManagementService $revenue): void {
+    $summary = ['airlines' => 0, 'routes_updated' => 0, 'flights_initialized' => 0];
+
+    Airline::query()
+        ->with('world')
+        ->where('status', 'active')
+        ->orderBy('id')
+        ->each(function (Airline $airline) use ($revenue, &$summary): void {
+            $summary['airlines']++;
+            $result = $revenue->backfillAirline(
+                $airline,
+                $airline->world?->simulated_at ?? now()
+            );
+            $summary['routes_updated'] += (int) ($result['routes_updated'] ?? 0);
+            $summary['flights_initialized'] += (int) ($result['flights_initialized'] ?? 0);
+        });
+
+    $this->info('Revenue management backfill completed.');
+    $this->table(
+        ['Airlines', 'Routes updated', 'Flights initialized'],
+        [[
+            $summary['airlines'],
+            $summary['routes_updated'],
+            $summary['flights_initialized'],
+        ]]
+    );
+})->purpose('Backfill pricing policies and dynamic fare snapshots');
