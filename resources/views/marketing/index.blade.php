@@ -15,22 +15,26 @@
 @endphp
 
 <section class="grid grid-4">
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="marketing" :size="19" /></div>
         <span class="eyebrow">BEKANNTHEIT</span>
         <strong>{{ number_format((float) $profile->awareness_score, 1, ',', '.') }} %</strong>
         <small>Airline-weite Markenbekanntheit</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="status" :size="19" /></div>
         <span class="eyebrow">REPUTATION</span>
         <strong>{{ number_format((float) $profile->reputation_score, 1, ',', '.') }} %</strong>
         <small>langfristiger Vertrauenswert</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="crew" :size="19" /></div>
         <span class="eyebrow">ZUFRIEDENHEIT</span>
         <strong>{{ number_format((float) $profile->satisfaction_score, 1, ',', '.') }} %</strong>
         <small>beeinflusst durch Service & Pünktlichkeit</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="finance" :size="19" /></div>
         <span class="eyebrow">MARKENWERT</span>
         <strong>{{ number_format($profile->brand_value_minor / 100, 0, ',', '.') }} {{ $airline->base_currency }}</strong>
         <small>Spielwert aus Bekanntheit, Reputation und Netzwerk</small>
