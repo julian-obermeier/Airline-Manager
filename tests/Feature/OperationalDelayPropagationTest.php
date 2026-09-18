@@ -54,7 +54,7 @@ class OperationalDelayPropagationTest extends TestCase
 
         $this->createQualifiedCrew($airline, $type, $frankfurt);
 
-        $this->post(route('operations.fleet.purchase'), [
+        $this->post(route('fleet-market.new'), [
             'aircraft_type_id' => $type->id,
             'registration' => 'D-ADLY',
         ])->assertRedirect('/fleet-market');
