@@ -56,13 +56,55 @@
         <span class="badge">{{ $types->count() }} reale Muster</span>
     </div>
 
-    <div class="aircraft-catalog">
+    <div class="filter-bar" data-aircraft-filter>
+        <div class="field search">
+            <label>Suche</label>
+            <input type="search" data-filter-search placeholder="z. B. Airbus, A350, Boeing, 787…">
+        </div>
+        <div class="field">
+            <label>Hersteller</label>
+            <select data-filter-manufacturer>
+                <option value="">Alle Hersteller</option>
+                @foreach($types->pluck('manufacturer')->unique()->sort()->values() as $manufacturer)
+                    <option value="{{ $manufacturer }}">{{ $manufacturer }}</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="field">
+            <label>Min. Sitze</label>
+            <input type="number" min="0" step="10" data-filter-seats placeholder="z. B. 150">
+        </div>
+        <div class="field">
+            <label>Min. Reichweite km</label>
+            <input type="number" min="0" step="500" data-filter-range placeholder="z. B. 6000">
+        </div>
+        <div class="field">
+            <label>Status</label>
+            <select data-filter-status>
+                <option value="">Alle</option>
+                <option value="active">In Produktion</option>
+                <option value="out_of_production">Bestandsmuster</option>
+            </select>
+        </div>
+        <div>
+            <span class="game-label">Treffer</span>
+            <div class="filter-count" data-filter-count>{{ $types->count() }}</div>
+        </div>
+
+        <div class="aircraft-catalog" style="grid-column:1/-1;width:100%">
+
         @foreach($types as $type)
             @php
                 $visualGroup = data_get($type->technical_data, 'visual_group', 'narrowbody');
                 $fuelBurn = (int) data_get($type->technical_data, 'fuel_burn_l_per_hour', 0);
             @endphp
-            <article class="aircraft-card">
+            <article class="aircraft-card"
+                     data-aircraft-card
+                     data-search="{{ $type->manufacturer }} {{ $type->model }} {{ $type->variant }} {{ $type->icao_type_code }}"
+                     data-manufacturer="{{ $type->manufacturer }}"
+                     data-seats="{{ (int) $type->typical_seats }}"
+                     data-range="{{ (int) $type->range_km }}"
+                     data-status="{{ $type->production_status }}">
                 <x-aircraft-visual :group="$visualGroup" :label="$type->icao_type_code ?? $type->model" />
                 <div class="aircraft-card-body">
                     <h4>{{ $type->manufacturer }} {{ $type->model }}</h4>
@@ -76,6 +118,7 @@
                 </div>
             </article>
         @endforeach
+        </div>
     </div>
 </section>
 
@@ -146,7 +189,7 @@
     </section>
 </div>
 
-<section class="card" style="margin-top:18px">
+<section class="card" style="margin-top:18px" data-table-filter>
     <div class="section-title">
         <div><span class="eyebrow">SECOND HAND</span><h3>Gebrauchtflugzeugmarkt</h3></div>
         <span class="badge">{{ $usedOffers->count() }} Angebote</span>
@@ -154,12 +197,19 @@
     @if($usedOffers->isEmpty())
         <div class="empty">Aktuell stehen keine Gebrauchtflugzeuge zum Verkauf.</div>
     @else
+        <div class="filter-bar">
+            <div class="field search">
+                <label>Gebrauchtmarkt durchsuchen</label>
+                <input type="search" data-table-search placeholder="Muster, Hersteller, Standort, Seriennummer…">
+            </div>
+            <div><span class="game-label">Treffer</span><div class="filter-count" data-table-count>{{ $usedOffers->count() }}</div></div>
+        </div>
         <div class="table-wrap">
             <table class="data-table">
                 <thead><tr><th>Muster</th><th>Baujahr</th><th>Stunden</th><th>Zyklen</th><th>Zustand</th><th>Standort</th><th>Preis</th><th>Aktion</th></tr></thead>
                 <tbody>
                 @foreach($usedOffers as $offer)
-                    <tr>
+                    <tr data-filter-row data-search="{{ $offer->type->manufacturer }} {{ $offer->type->model }} {{ $offer->serial_number }} {{ $offer->locationAirport?->iata_code }}">
                         <td><strong>{{ $offer->type->manufacturer }} {{ $offer->type->model }}</strong><br><span class="muted">S/N {{ $offer->serial_number }}</span></td>
                         <td>{{ $offer->manufactured_on?->format('Y') ?? '–' }}</td>
                         <td>{{ number_format((float) $offer->flight_hours, 0, ',', '.') }} h</td>
