@@ -287,6 +287,18 @@ class FlightSimulationService
         $marketingMultiplier = (float) ($marketingSnapshot['multiplier'] ?? 1.0);
         $competitionSnapshot = $this->competition->snapshotForFlight($flight, $simulationNow);
         $competitionMultiplier = (float) ($competitionSnapshot['competition_multiplier'] ?? 1.0);
+
+        $this->revenueManagement->repriceFlight(
+            $flight,
+            $simulationNow,
+            $competitionSnapshot
+        );
+
+        $flight->refresh();
+        $data = $flight->operational_data ?? [];
+        $commercial = $data['commercial'] ?? [];
+        $cabins = $commercial['cabins'] ?? $cabins;
+
         $previousPassengers = (int) $flight->passengers_booked;
         $totalBooked = 0;
         $totalCapacity = 0;
@@ -295,6 +307,7 @@ class FlightSimulationService
             $capacity = max(0, (int) data_get($cabins, $cabin.'.capacity', 0));
             $fareMinor = max(0, (int) data_get($cabins, $cabin.'.fare_minor', 0));
             $alreadyBooked = max(0, (int) data_get($cabins, $cabin.'.booked', 0));
+            $existingRevenueMinor = max(0, (int) data_get($cabins, $cabin.'.revenue_minor', 0));
             $totalCapacity += $capacity;
 
             if ($capacity === 0 || $fareMinor === 0) {
@@ -327,11 +340,16 @@ class FlightSimulationService
             );
             $targetBooked = min($capacity, (int) floor($capacity * $targetLoadFactor * $progress));
             $booked = min($capacity, max($alreadyBooked, $targetBooked));
+            $newBookings = max(0, $booked - $alreadyBooked);
 
             $cabins[$cabin]['capacity'] = $capacity;
             $cabins[$cabin]['fare_minor'] = $fareMinor;
             $cabins[$cabin]['booked'] = $booked;
-            $cabins[$cabin]['revenue_minor'] = $booked * $fareMinor;
+            $cabins[$cabin]['revenue_minor'] = $existingRevenueMinor + ($newBookings * $fareMinor);
+            $cabins[$cabin]['last_sold_fare_minor'] = $newBookings > 0
+                ? $fareMinor
+                : (int) data_get($cabins, $cabin.'.last_sold_fare_minor', 0);
+            $cabins[$cabin]['new_bookings_last_tick'] = $newBookings;
             $cabins[$cabin]['target_load_factor'] = round($targetLoadFactor, 4);
             $totalBooked += $booked;
         }
