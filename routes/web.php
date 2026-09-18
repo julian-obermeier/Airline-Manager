@@ -52,6 +52,11 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/schedules', [FlightScheduleController::class, 'store'])->name('schedules.store');
     Route::patch('/schedules/{schedule}/toggle', [FlightScheduleController::class, 'toggle'])->name('schedules.toggle');
 
+    Route::get('/crew', [CrewController::class, 'index'])->name('crew.index');
+    Route::post('/crew', [CrewController::class, 'store'])->name('crew.store');
+    Route::post('/crew/{crewMember}/qualifications', [CrewController::class, 'storeQualification'])->name('crew.qualifications.store');
+    Route::patch('/crew/{crewMember}/terminate', [CrewController::class, 'terminate'])->name('crew.terminate');
+
     Route::get('/maintenance', [MaintenanceController::class, 'index'])->name('maintenance.index');
     Route::post('/maintenance', [MaintenanceController::class, 'store'])->name('maintenance.store');
     Route::patch('/maintenance/{event}/cancel', [MaintenanceController::class, 'cancel'])->name('maintenance.cancel');
