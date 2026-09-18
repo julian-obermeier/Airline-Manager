@@ -2,6 +2,7 @@
 
 namespace App\Services\Commercial;
 
+use App\Models\Airline;
 use App\Models\AirlineRoute;
 use App\Models\Airport;
 use App\Models\Flight;
@@ -346,6 +347,50 @@ class RevenueManagementService
             'cabins' => $decisions,
             'policy' => $policy,
         ];
+    }
+
+    public function backfillAirline(Airline $airline, Carbon $at): array
+    {
+        $summary = [
+            'routes_updated' => 0,
+            'flights_initialized' => 0,
+        ];
+
+        $routes = AirlineRoute::query()
+            ->where('airline_id', $airline->id)
+            ->where('status', 'active')
+            ->get();
+
+        foreach ($routes as $route) {
+            $settings = $route->settings ?? [];
+
+            if (! is_array(data_get($settings, 'pricing_policy'))) {
+                $settings['pricing_policy'] = $this->defaultPricingPolicy();
+                $settings['pricing_policy_updated_at'] = $at->toIso8601String();
+                $route->forceFill(['settings' => $settings])->save();
+                $summary['routes_updated']++;
+            }
+        }
+
+        Flight::query()
+            ->where('airline_id', $airline->id)
+            ->whereIn('status', ['scheduled', 'boarding'])
+            ->where('scheduled_departure_at', '>=', $at)
+            ->orderBy('scheduled_departure_at')
+            ->each(function (Flight $flight) use (&$summary): void {
+                $hadBaseFare = data_get(
+                    $flight->operational_data,
+                    'commercial.cabins.economy.base_fare_minor'
+                ) !== null;
+
+                $this->initializeFlightPricing($flight);
+
+                if (! $hadBaseFare) {
+                    $summary['flights_initialized']++;
+                }
+            });
+
+        return $summary;
     }
 
     public function bookingProgress(Flight $flight, Carbon $at): float
