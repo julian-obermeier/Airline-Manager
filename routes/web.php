@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AirlineController;
+use App\Http\Controllers\AirportOperationsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CrewController;
 use App\Http\Controllers\FinanceController;
@@ -52,6 +53,9 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/schedules', [FlightScheduleController::class, 'index'])->name('schedules.index');
     Route::post('/schedules', [FlightScheduleController::class, 'store'])->name('schedules.store');
     Route::patch('/schedules/{schedule}/toggle', [FlightScheduleController::class, 'toggle'])->name('schedules.toggle');
+
+    Route::get('/airport-operations', [AirportOperationsController::class, 'index'])->name('airport-operations.index');
+    Route::post('/airport-operations/stations', [AirportOperationsController::class, 'storeStation'])->name('airport-operations.stations.store');
 
     Route::get('/crew', [CrewController::class, 'index'])->name('crew.index');
     Route::post('/crew', [CrewController::class, 'store'])->name('crew.store');
