@@ -286,7 +286,7 @@
     @else
         <div class="table-wrap">
             <table class="data-table">
-                <thead><tr><th>Flug</th><th>Route</th><th>Flugzeug</th><th>Abflug</th><th>Ankunft</th><th>Buchungen</th><th>Buchungswert</th><th>Ergebnis</th><th>Status</th></tr></thead>
+                <thead><tr><th>Flug</th><th>Route</th><th>Flugzeug</th><th>Abflug</th><th>Ankunft</th><th>Crew</th><th>Buchungen</th><th>Buchungswert</th><th>Ergebnis</th><th>Status</th></tr></thead>
                 <tbody>
                 @foreach($flights as $flight)
                     @php
@@ -299,6 +299,7 @@
                             ((int) data_get($flight->operational_data, 'commercial.cabins.first.revenue_minor', 0));
                         $profitMinor = data_get($flight->operational_data, 'economics.profit_minor');
                         $bookingProgress = (float) data_get($flight->operational_data, 'commercial.booking_progress', 0);
+                        $crewSnapshot = $crewSnapshots->get($flight->id);
                     @endphp
                     <tr>
                         <td><strong>{{ $flight->flight_number }}</strong></td>
@@ -306,6 +307,15 @@
                         <td>{{ $flight->aircraft?->registration ?? '–' }}</td>
                         <td>{{ $flight->scheduled_departure_at->timezone('Europe/Berlin')->format('d.m.Y H:i') }}</td>
                         <td>{{ $flight->scheduled_arrival_at->timezone('Europe/Berlin')->format('d.m.Y H:i') }}</td>
+                        <td>
+                            @if($crewSnapshot && $crewSnapshot['complete'])
+                                <span class="badge">{{ $crewSnapshot['assigned']['total'] }} / {{ $crewSnapshot['requirements']['total'] }} vollständig</span>
+                            @elseif($crewSnapshot)
+                                <span class="badge">{{ $crewSnapshot['assigned']['total'] }} / {{ $crewSnapshot['requirements']['total'] }} · fehlen {{ $crewSnapshot['missing']['total'] }}</span>
+                            @else
+                                <span class="muted">–</span>
+                            @endif
+                        </td>
                         <td>
                             <strong>{{ $flight->passengers_booked }}</strong>
                             @if($economyBooked + $businessBooked + $firstBooked > 0)
