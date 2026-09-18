@@ -18,7 +18,7 @@
 
             <div class="field full">
                 <label for="home_airport_id">Heimatflughafen</label>
-                <select id="home_airport_id" name="home_airport_id" required>
+                <select id="home_airport_id" name="home_airport_id" data-searchable data-search-placeholder="Flughafen nach Name, Stadt, IATA oder Land suchen…" required>
                     <option value="">Bitte auswählen</option>
                     <x-airport-options :airports="$airports" :selected="old('home_airport_id')" />
                 </select>
