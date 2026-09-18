@@ -104,6 +104,39 @@ class RevenueManagementController extends Controller
         ]);
     }
 
+    public function updateBaseFares(Request $request, AirlineRoute $route): RedirectResponse
+    {
+        $context = $this->activeContext($request);
+
+        if (! $context) {
+            return redirect()->route('home');
+        }
+
+        [$world, $airline] = $context;
+        abort_unless($route->world_id === $world->id && $route->airline_id === $airline->id, 404);
+
+        $validated = $request->validate([
+            'economy_fare' => ['required', 'numeric', 'min:10', 'max:5000'],
+            'business_fare' => ['required', 'numeric', 'min:0', 'max:10000'],
+            'first_fare' => ['required', 'numeric', 'min:0', 'max:20000'],
+        ]);
+
+        $settings = $route->settings ?? [];
+        $settings['fares'] = [
+            'economy_minor' => (int) round(((float) $validated['economy_fare']) * 100),
+            'business_minor' => (int) round(((float) $validated['business_fare']) * 100),
+            'first_minor' => (int) round(((float) $validated['first_fare']) * 100),
+        ];
+        $settings['pricing_updated_at'] = now()->toIso8601String();
+
+        $route->forceFill(['settings' => $settings])->save();
+
+        return redirect()->route('revenue-management.index')->with(
+            'success',
+            'Basistarife für '.$route->origin?->iata_code.' → '.$route->destination?->iata_code.' wurden gespeichert.'
+        );
+    }
+
     public function updatePolicy(Request $request, AirlineRoute $route): RedirectResponse
     {
         $context = $this->activeContext($request);
