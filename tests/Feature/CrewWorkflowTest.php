@@ -89,8 +89,6 @@ class CrewWorkflowTest extends TestCase
         $this->assertSame($frankfurt->id, $aircraft->fresh()->current_airport_id);
 
         $this->post(route('crew.store'), [
-            'first_name' => 'No',
-            'last_name' => 'Rating',
             'role' => 'captain',
             'base_airport_id' => $frankfurt->id,
             'monthly_salary' => 9500,
@@ -106,8 +104,6 @@ class CrewWorkflowTest extends TestCase
 
         foreach ($people as [$first, $last, $role, $salary, $rating]) {
             $payload = [
-                'first_name' => $first,
-                'last_name' => $last,
                 'role' => $role,
                 'base_airport_id' => $frankfurt->id,
                 'monthly_salary' => $salary,
@@ -168,7 +164,14 @@ class CrewWorkflowTest extends TestCase
         $this->get(route('crew.index'))
             ->assertOk()
             ->assertSee('Personal & Crew')
-            ->assertSee('Anna Captain')
+            ->assertSee('EMP0001')
             ->assertSee('E195-E2');
+
+        $this->assertTrue(
+            (bool) data_get(
+                CrewMember::query()->where('airline_id', $airline->id)->firstOrFail()->metadata,
+                'name_generated'
+            )
+        );
     }
 }
