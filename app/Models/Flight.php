@@ -70,4 +70,9 @@ class Flight extends Model
     {
         return $this->hasMany(FlightCrewAssignment::class);
     }
+
+    public function slotReservations(): HasMany
+    {
+        return $this->hasMany(AirportSlotReservation::class);
+    }
 }
