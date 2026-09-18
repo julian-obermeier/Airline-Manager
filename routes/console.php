@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Airline;
 use App\Models\World;
+use App\Services\Operations\AirportOperationsService;
 use App\Services\Operations\CrewService;
 use App\Services\Operations\FlightLocationGuardService;
 use App\Services\Operations\MaintenanceService;
@@ -18,6 +20,7 @@ Artisan::command('airline:simulate', function (
     ProcurementService $procurement,
     FlightLocationGuardService $locationGuard,
     CrewService $crewService,
+    AirportOperationsService $airportOperations,
 ): void {
     $realNow = now();
     $locationSummary = $locationGuard->guardBeforeTick($realNow);
@@ -25,8 +28,9 @@ Artisan::command('airline:simulate', function (
     $maintenanceSummary = ['maintenance_started' => 0, 'maintenance_completed' => 0, 'maintenance_grounded' => 0];
     $procurementSummary = ['deliveries' => 0, 'lease_payments' => 0, 'leases_ended' => 0];
     $crewSummary = ['payroll_runs' => 0, 'salary_minor' => 0];
+    $airportSummary = ['station_fee_runs' => 0, 'station_cost_minor' => 0];
 
-    World::query()->where('status', 'active')->orderBy('id')->each(function (World $world) use ($maintenance, $procurement, $crewService, &$maintenanceSummary, &$procurementSummary, &$crewSummary): void {
+    World::query()->where('status', 'active')->orderBy('id')->each(function (World $world) use ($maintenance, $procurement, $crewService, $airportOperations, &$maintenanceSummary, &$procurementSummary, &$crewSummary, &$airportSummary): void {
         $world->refresh();
         $simulationNow = $world->simulated_at ?? now();
 
@@ -44,11 +48,16 @@ Artisan::command('airline:simulate', function (
         foreach ($crewSummary as $key => $value) {
             $crewSummary[$key] += (int) ($payrollResult[$key] ?? 0);
         }
+
+        $airportResult = $airportOperations->processStationFees($world, $simulationNow);
+        foreach ($airportSummary as $key => $value) {
+            $airportSummary[$key] += (int) ($airportResult[$key] ?? 0);
+        }
     });
 
     $this->info('Simulation tick completed.');
     $this->table(
-        ['Worlds', 'Checked', 'Boarding', 'Departed', 'In air', 'Completed', 'Crew blocks', 'Location blocks', 'Maintenance', 'Deliveries', 'Lease payments', 'Payroll'],
+        ['Worlds', 'Checked', 'Boarding', 'Departed', 'In air', 'Completed', 'Crew blocks', 'Location blocks', 'Maintenance', 'Deliveries', 'Lease payments', 'Payroll', 'Station fees'],
         [[
             $summary['worlds'],
             $summary['flights_checked'],
@@ -62,6 +71,32 @@ Artisan::command('airline:simulate', function (
             $procurementSummary['deliveries'],
             $procurementSummary['lease_payments'],
             $crewSummary['payroll_runs'],
+            $airportSummary['station_fee_runs'],
         ]]
     );
-})->purpose('Advance world clocks and process flights, crew, location integrity, maintenance, deliveries, leasing and payroll');
+})->purpose('Advance world clocks and process flights, crew, airports, maintenance, deliveries, leasing and payroll');
+
+Artisan::command('airline:airport-backfill', function (AirportOperationsService $airportOperations): void {
+    $summary = ['airlines' => 0, 'stations' => 0, 'slots' => 0, 'unavailable' => 0];
+
+    Airline::query()
+        ->with(['world', 'homeAirport', 'routes.origin', 'routes.destination'])
+        ->where('status', 'active')
+        ->orderBy('id')
+        ->each(function (Airline $airline) use ($airportOperations, &$summary): void {
+            $summary['airlines']++;
+            $summary['stations'] += $airportOperations->ensureNetworkStations($airline);
+            $result = $airportOperations->reserveMissingForAirline(
+                $airline,
+                $airline->world?->simulated_at ?? now()
+            );
+            $summary['slots'] += $result['reserved'];
+            $summary['unavailable'] += $result['unavailable'];
+        });
+
+    $this->info('Airport operations backfill completed.');
+    $this->table(
+        ['Airlines', 'Stations created', 'Slots created', 'Unavailable flights'],
+        [[$summary['airlines'], $summary['stations'], $summary['slots'], $summary['unavailable']]]
+    );
+})->purpose('Backfill stations and slots for existing airlines and future flights');
