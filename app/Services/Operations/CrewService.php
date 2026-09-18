@@ -252,7 +252,7 @@ class CrewService
             ->where('world_id', $world->id)
             ->where('status', 'active')
             ->orderBy('id')
-            ->each(function (Airline $airline) use ($simulationNow, &$summary): void {
+            ->each(function (Airline $airline) use ($world, $simulationNow, &$summary): void {
                 $firstCrew = CrewMember::query()
                     ->where('airline_id', $airline->id)
                     ->orderBy('hired_at')
