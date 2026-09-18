@@ -94,7 +94,6 @@
     input?.addEventListener('input', apply);
     apply();
   });
-}
 
   const loadAircraftPhoto = async (root) => {
     if (root.dataset.photoLoaded === '1' || root.dataset.photoLoading === '1') return;
