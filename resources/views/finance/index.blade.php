@@ -138,7 +138,7 @@
                 @foreach($dailyPerformance->take(-14) as $row)
                     <div style="padding:10px 0;border-bottom:1px solid #edf1f5">
                         <div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:7px">
-                            <strong>{{ CarbonCarbon::parse($row['date'])->format('d.m.') }}</strong>
+                            <strong>{{ substr($row['date'], 8, 2) }}.{{ substr($row['date'], 5, 2) }}.</strong>
                             <span class="{{ $row['result_minor'] >= 0 ? 'kpi-positive' : 'kpi-negative' }}">
                                 {{ $row['result_minor'] >= 0 ? '+' : '' }}{{ number_format($row['result_minor'] / 100, 0, ',', '.') }}
                             </span>
