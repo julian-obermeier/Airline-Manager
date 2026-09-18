@@ -139,7 +139,13 @@
                     $visualGroup = data_get($aircraft->type?->technical_data, 'visual_group', 'narrowbody');
                 @endphp
                 <article class="aircraft-card planner-aircraft-card">
-                    <x-aircraft-visual :group="$visualGroup" :label="$aircraft->registration" />
+                    <x-aircraft-visual
+                        :group="$visualGroup"
+                        :label="$aircraft->registration"
+                        :type-id="$aircraft->type?->id"
+                        :manufacturer="$aircraft->type?->manufacturer"
+                        :model="$aircraft->type?->model"
+                    />
                     <div class="aircraft-card-body">
                         <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px">
                             <div>
