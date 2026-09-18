@@ -10,6 +10,7 @@ use App\Http\Controllers\FlightScheduleController;
 use App\Http\Controllers\GameController;
 use App\Http\Controllers\MaintenanceController;
 use App\Http\Controllers\MarketingController;
+use App\Http\Controllers\MarketController;
 use App\Http\Controllers\OperationsController;
 use App\Http\Controllers\SimulationController;
 use App\Http\Controllers\WorldMapController;
@@ -66,6 +67,8 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/maintenance', [MaintenanceController::class, 'index'])->name('maintenance.index');
     Route::post('/maintenance', [MaintenanceController::class, 'store'])->name('maintenance.store');
     Route::patch('/maintenance/{event}/cancel', [MaintenanceController::class, 'cancel'])->name('maintenance.cancel');
+
+    Route::get('/market', [MarketController::class, 'index'])->name('market.index');
 
     Route::get('/marketing', [MarketingController::class, 'index'])->name('marketing.index');
     Route::post('/marketing', [MarketingController::class, 'store'])->name('marketing.store');
