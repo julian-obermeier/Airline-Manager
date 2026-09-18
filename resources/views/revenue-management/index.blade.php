@@ -46,7 +46,10 @@
                 <thead><tr><th>Route</th><th>Economy</th><th>Business</th><th>First</th><th>Aktion</th></tr></thead>
                 <tbody>
                 @foreach($routes as $route)
-                    @php($fares = $routeData->get($route->id)['fares'])
+                    @php
+                        $pricingRow = $routeData->get($route->id, []);
+                        $fares = $pricingRow['fares'] ?? ['economy_minor' => 0, 'business_minor' => 0, 'first_minor' => 0];
+                    @endphp
                     <tr>
                         <td><strong>{{ $route->origin?->iata_code }} → {{ $route->destination?->iata_code }}</strong><br><span class="muted">{{ $route->origin?->city }} → {{ $route->destination?->city }}</span></td>
                         <td colspan="4">
