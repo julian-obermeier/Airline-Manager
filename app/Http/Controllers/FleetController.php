@@ -59,7 +59,9 @@ class FleetController extends Controller
             'ownedCount' => $fleet->where('ownership_type', 'owned')->count(),
             'leasedCount' => $fleet->where('ownership_type', 'leased')->count(),
             'availableCount' => $fleet->where('status', 'available')->count(),
-            'estimatedFleetValueMinor' => (int) $fleetRows->where(fn ($row) => $row['aircraft']->ownership_type === 'owned')->sum('estimated_sale_minor'),
+            'estimatedFleetValueMinor' => (int) $fleetRows
+                ->filter(fn (array $row): bool => $row['aircraft']->ownership_type === 'owned')
+                ->sum('estimated_sale_minor'),
         ]);
     }
 
