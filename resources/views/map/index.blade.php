@@ -133,6 +133,7 @@
                                 </div>
                             </div>
                             <div class="route-meta" style="margin-top:9px">
+                                {{ $route['origin']['city'] }} → {{ $route['destination']['city'] }} ·
                                 {{ number_format($route['distance_km'], 0, ',', '.') }} km ·
                                 {{ intdiv($route['block_minutes'], 60) }}h {{ $route['block_minutes'] % 60 }}m Blockzeit
                             </div>
