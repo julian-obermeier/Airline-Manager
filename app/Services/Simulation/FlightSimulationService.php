@@ -9,6 +9,7 @@ use App\Models\LedgerAccount;
 use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
 use App\Models\World;
+use App\Services\Commercial\MarketCompetitionService;
 use App\Services\Commercial\MarketingService;
 use App\Services\Commercial\RevenueManagementService;
 use App\Services\Operations\AirportOperationsService;
@@ -25,6 +26,7 @@ class FlightSimulationService
         private readonly CrewService $crewService,
         private readonly AirportOperationsService $airportOperations,
         private readonly MarketingService $marketing,
+        private readonly MarketCompetitionService $competition,
     ) {
     }
 
@@ -46,6 +48,7 @@ class FlightSimulationService
             'completed' => 0,
             'crew_cancelled' => 0,
             'campaigns_expired' => 0,
+            'markets_refreshed' => 0,
         ];
 
         World::query()
@@ -62,6 +65,9 @@ class FlightSimulationService
                 $summary['schedules_checked'] += $planning['schedules'];
                 $summary['flights_generated'] += $planning['flights_created'];
                 $summary['rotations_skipped'] += $planning['rotations_skipped'];
+
+                $marketRefresh = $this->competition->refreshWorld($world, $simulationNow);
+                $summary['markets_refreshed'] += (int) ($marketRefresh['markets'] ?? 0);
 
                 $bookingHorizon = $simulationNow->copy()->addDays(max(1, (int) config('simulation.booking_window_days', 14)));
 
@@ -279,6 +285,8 @@ class FlightSimulationService
         $dayFactor = in_array($flight->scheduled_departure_at->dayOfWeekIso, [5, 7], true) ? 1.06 : 1.00;
         $marketingSnapshot = $this->marketing->demandSnapshot($flight, $simulationNow);
         $marketingMultiplier = (float) ($marketingSnapshot['multiplier'] ?? 1.0);
+        $competitionSnapshot = $this->competition->snapshotForFlight($flight, $simulationNow);
+        $competitionMultiplier = (float) ($competitionSnapshot['competition_multiplier'] ?? 1.0);
         $previousPassengers = (int) $flight->passengers_booked;
         $totalBooked = 0;
         $totalCapacity = 0;
@@ -307,7 +315,15 @@ class FlightSimulationService
             $variation = (($variationSeed % 21) - 10) / 100;
             $targetLoadFactor = min(
                 0.98,
-                max(0.05, ($baseLoad + $variation) * $demandIndex * $dayFactor * $priceFactor * $marketingMultiplier)
+                max(
+                    0.05,
+                    ($baseLoad + $variation)
+                    * $demandIndex
+                    * $dayFactor
+                    * $priceFactor
+                    * $marketingMultiplier
+                    * $competitionMultiplier
+                )
             );
             $targetBooked = min($capacity, (int) floor($capacity * $targetLoadFactor * $progress));
             $booked = min($capacity, max($alreadyBooked, $targetBooked));
@@ -325,6 +341,7 @@ class FlightSimulationService
             'booking_window_days' => (int) config('simulation.booking_window_days', 14),
             'booking_progress' => round($progress, 4),
             'marketing' => $marketingSnapshot,
+            'competition' => $competitionSnapshot,
             'cabins' => $cabins,
         ];
         $data['load_factor'] = $totalCapacity > 0 ? round($totalBooked / $totalCapacity, 4) : 0;
