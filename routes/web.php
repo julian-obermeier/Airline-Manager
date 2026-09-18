@@ -5,6 +5,7 @@ use App\Http\Controllers\AirportOperationsController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CrewController;
 use App\Http\Controllers\FinanceController;
+use App\Http\Controllers\FleetController;
 use App\Http\Controllers\FleetMarketController;
 use App\Http\Controllers\FlightScheduleController;
 use App\Http\Controllers\GameController;
@@ -45,6 +46,9 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/operations/flights', [OperationsController::class, 'scheduleFlight'])
         ->middleware('aircraft.position')
         ->name('operations.flights.store');
+
+    Route::get('/fleet', [FleetController::class, 'index'])->name('fleet.index');
+    Route::post('/fleet/{aircraft}/sell', [FleetController::class, 'sell'])->name('fleet.sell');
 
     Route::get('/fleet-market', [FleetMarketController::class, 'index'])->name('fleet-market.index');
     Route::post('/fleet-market/new', [FleetMarketController::class, 'orderNew'])->name('fleet-market.new');
