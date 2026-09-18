@@ -6,10 +6,33 @@
 @section('subheading', $airline->name.' · '.$world->name.' · Weltzeit '.$simulationNow->timezone('Europe/Berlin')->format('d.m.Y H:i'))
 
 @push('head')
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIINfQ3ynWzRRCgEzQxYY3yEOi4fP4YVQyM=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
 <style>
-    .leaflet-container{font:inherit;background:#dfeaf3}
+    /* Critical Leaflet layout fallback: keeps tiles/markers positioned even if CDN CSS is delayed. */
+    .leaflet-container{position:relative;overflow:hidden;font:inherit;background:#dfeaf3;outline:0}
+    .leaflet-pane,.leaflet-tile,.leaflet-marker-icon,.leaflet-marker-shadow,.leaflet-tile-container,
+    .leaflet-pane>svg,.leaflet-pane>canvas,.leaflet-zoom-box{position:absolute;left:0;top:0}
+    .leaflet-map-pane canvas{z-index:100}.leaflet-tile-pane{z-index:200}.leaflet-overlay-pane{z-index:400}
+    .leaflet-shadow-pane{z-index:500}.leaflet-marker-pane{z-index:600}.leaflet-tooltip-pane{z-index:650}.leaflet-popup-pane{z-index:700}
+    .leaflet-tile{filter:inherit;visibility:hidden;max-width:none!important;max-height:none!important}
+    .leaflet-tile-loaded{visibility:inherit}
+    .leaflet-marker-icon,.leaflet-marker-shadow{display:block}
+    .leaflet-container .leaflet-overlay-pane svg{max-width:none!important;max-height:none!important}
+    .leaflet-zoom-animated{transform-origin:0 0}
+    .leaflet-top,.leaflet-bottom{position:absolute;z-index:1000;pointer-events:none}
+    .leaflet-top{top:0}.leaflet-right{right:0}.leaflet-bottom{bottom:0}.leaflet-left{left:0}
+    .leaflet-control{position:relative;z-index:800;pointer-events:auto;float:left;clear:both}
+    .leaflet-right .leaflet-control{float:right}
+    .leaflet-top .leaflet-control{margin-top:10px}.leaflet-bottom .leaflet-control{margin-bottom:10px}
+    .leaflet-left .leaflet-control{margin-left:10px}.leaflet-right .leaflet-control{margin-right:10px}
+    .leaflet-control-zoom a{display:block;width:30px;height:30px;line-height:30px;text-align:center;background:#fff;color:#334155;border-bottom:1px solid #dbe4ef;font-weight:800}
+    .leaflet-control-zoom{border:1px solid #cbd5e1;border-radius:8px;overflow:hidden;box-shadow:0 4px 12px rgba(15,23,42,.12)}
+    .leaflet-control-attribution{background:rgba(255,255,255,.86);padding:3px 7px;font-size:10px;color:#64748b}
+    .leaflet-popup{position:absolute;text-align:center;margin-bottom:20px}.leaflet-popup-content-wrapper{background:#fff;padding:1px;text-align:left;border-radius:12px}
+    .leaflet-popup-content{margin:13px 18px;line-height:1.4}.leaflet-popup-tip-container{width:40px;height:20px;position:absolute;left:50%;margin-left:-20px;overflow:hidden;pointer-events:none}
+    .leaflet-popup-tip{width:17px;height:17px;padding:1px;margin:-10px auto 0;transform:rotate(45deg);background:#fff;box-shadow:3px 3px 14px rgba(0,0,0,.12)}
+    .leaflet-popup-close-button{position:absolute;top:0;right:0;border:0;background:transparent;color:#64748b;font-size:20px;padding:4px 6px;z-index:2}
+    .leaflet-tooltip{position:absolute;padding:6px;background:#fff;border:1px solid #dbe4ef;border-radius:6px;color:#334155;white-space:nowrap;box-shadow:0 4px 12px rgba(15,23,42,.1)}
     .airport-marker{display:grid;place-items:center;width:28px;height:28px;border-radius:50%;background:#fff;border:2px solid #94a3b8;color:#475569;font-size:9px;font-weight:900;box-shadow:0 4px 12px rgba(15,23,42,.18)}
     .airport-marker.network{width:34px;height:34px;border-color:#2563eb;color:#1d4ed8;background:#eff6ff;font-size:10px}
     .airport-marker.home{width:38px;height:38px;border-color:#059669;color:#047857;background:#ecfdf5}
@@ -287,6 +310,12 @@ document.addEventListener('DOMContentLoaded', () => {
         else map.setView([48.5,10.5],4);
     };
     fitNetwork();
+    window.setTimeout(() => map.invalidateSize(true), 80);
+    window.setTimeout(() => {
+        map.invalidateSize(true);
+        fitNetwork();
+    }, 350);
+    window.addEventListener('resize', () => map.invalidateSize(false));
 
     const searchInput = document.getElementById('map-airport-search');
     const showAirport = () => {
