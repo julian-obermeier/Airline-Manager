@@ -27,6 +27,7 @@ class OperationsController extends Controller
     public function __construct(
         private readonly RevenueManagementService $revenueManagement,
         private readonly MaintenanceService $maintenance,
+        private readonly CrewService $crewService,
     ) {
     }
 
@@ -56,7 +57,7 @@ class OperationsController extends Controller
             ->get();
 
         $flights = Flight::query()
-            ->with(['route.origin', 'route.destination', 'aircraft.type'])
+            ->with(['route.origin', 'route.destination', 'aircraft.type', 'crewAssignments.crewMember'])
             ->where('world_id', $world->id)
             ->where('airline_id', $airline->id)
             ->orderBy('scheduled_departure_at')
@@ -65,6 +66,10 @@ class OperationsController extends Controller
 
         $routePricing = $routes->mapWithKeys(fn (AirlineRoute $route): array => [
             $route->id => $this->revenueManagement->routeFares($route, $airline->business_model),
+        ]);
+
+        $crewSnapshots = $flights->mapWithKeys(fn (Flight $flight): array => [
+            $flight->id => $this->crewService->staffingSnapshot($flight),
         ]);
 
         return view('operations.index', [
@@ -81,6 +86,7 @@ class OperationsController extends Controller
             'routes' => $routes,
             'routePricing' => $routePricing,
             'flights' => $flights,
+            'crewSnapshots' => $crewSnapshots,
         ]);
     }
 
@@ -365,7 +371,7 @@ class OperationsController extends Controller
 
         $fares = $this->revenueManagement->routeFares($route, $airline->business_model);
 
-        Flight::create([
+        $flight = Flight::create([
             'world_id' => $world->id,
             'airline_id' => $airline->id,
             'route_id' => $route->id,
@@ -404,7 +410,15 @@ class OperationsController extends Controller
             ],
         ]);
 
-        return redirect()->route('operations.index')->with('success', 'Flug wurde geplant. Ticketpreise und Kabineninventar wurden für diesen Flug eingefroren.');
+        $crewSnapshot = $this->crewService->assignCrew($flight);
+        $crewMessage = $crewSnapshot['complete']
+            ? ' Crew wurde automatisch vollständig zugewiesen.'
+            : ' Crew ist noch unvollständig; vor Abflug fehlen '.$crewSnapshot['missing']['total'].' Mitarbeiter.';
+
+        return redirect()->route('operations.index')->with(
+            'success',
+            'Flug wurde geplant. Ticketpreise und Kabineninventar wurden eingefroren.'.$crewMessage
+        );
     }
 
     private function activeContext(Request $request): ?array
