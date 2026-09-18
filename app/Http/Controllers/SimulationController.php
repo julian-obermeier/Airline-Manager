@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\World;
+use App\Services\Operations\AirportOperationsService;
 use App\Services\Operations\CrewService;
 use App\Services\Operations\FlightLocationGuardService;
 use App\Services\Operations\MaintenanceService;
@@ -20,6 +21,7 @@ class SimulationController extends Controller
         ProcurementService $procurement,
         FlightLocationGuardService $locationGuard,
         CrewService $crewService,
+        AirportOperationsService $airportOperations,
     ): JsonResponse {
         $configuredToken = (string) config('simulation.cron_token');
         $providedToken = (string) $request->query('token');
@@ -44,11 +46,15 @@ class SimulationController extends Controller
             'payroll_runs' => 0,
             'salary_minor' => 0,
         ];
+        $airportSummary = [
+            'station_fee_runs' => 0,
+            'station_cost_minor' => 0,
+        ];
 
         World::query()
             ->where('status', 'active')
             ->orderBy('id')
-            ->each(function (World $world) use ($maintenance, $procurement, $crewService, &$maintenanceSummary, &$procurementSummary, &$crewSummary): void {
+            ->each(function (World $world) use ($maintenance, $procurement, $crewService, $airportOperations, &$maintenanceSummary, &$procurementSummary, &$crewSummary, &$airportSummary): void {
                 $world->refresh();
                 $simulationNow = $world->simulated_at ?? now();
 
@@ -66,6 +72,11 @@ class SimulationController extends Controller
                 foreach ($crewSummary as $key => $value) {
                     $crewSummary[$key] += (int) ($payrollResult[$key] ?? 0);
                 }
+
+                $airportResult = $airportOperations->processStationFees($world, $simulationNow);
+                foreach ($airportSummary as $key => $value) {
+                    $airportSummary[$key] += (int) ($airportResult[$key] ?? 0);
+                }
             });
 
         return response()->json([
@@ -75,6 +86,7 @@ class SimulationController extends Controller
             'maintenance' => $maintenanceSummary,
             'procurement' => $procurementSummary,
             'crew' => $crewSummary,
+            'airports' => $airportSummary,
             'executed_at' => now()->toIso8601String(),
         ]);
     }
