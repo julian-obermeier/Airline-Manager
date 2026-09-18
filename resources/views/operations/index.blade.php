@@ -164,7 +164,7 @@
     </section>
 </div>
 
-<section class="card" style="margin-top:18px">
+<section class="card" style="margin-top:18px" data-aircraft-filter>
     <div class="section-title">
         <div>
             <span class="eyebrow">FLEET STATUS</span>
@@ -179,14 +179,45 @@
     @if($fleet->isEmpty())
         <div class="empty">Noch kein Flugzeug vorhanden. Beschaffung erfolgt zentral im Flottenmarkt.</div>
     @else
+        <div class="filter-bar">
+            <div class="field search">
+                <label>Flotte durchsuchen</label>
+                <input type="search" data-filter-search placeholder="Kennzeichen, Hersteller oder Muster…">
+            </div>
+            <div class="field">
+                <label>Hersteller</label>
+                <select data-filter-manufacturer>
+                    <option value="">Alle</option>
+                    @foreach($fleet->pluck('type.manufacturer')->filter()->unique()->sort()->values() as $manufacturer)
+                        <option value="{{ $manufacturer }}">{{ $manufacturer }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="field">
+                <label>Min. Sitze</label>
+                <input type="number" min="0" step="10" data-filter-seats placeholder="z. B. 150">
+            </div>
+            <div class="field">
+                <label>Min. Reichweite</label>
+                <input type="number" min="0" step="500" data-filter-range placeholder="km">
+            </div>
+            <div><span class="game-label">Treffer</span><div class="filter-count" data-filter-count>{{ $fleet->count() }}</div></div>
+        </div>
         <div class="table-wrap">
             <table class="data-table">
-                <thead><tr><th>Kennzeichen</th><th>Muster</th><th>Standort</th><th>Flugstunden</th><th>Zyklen</th><th>Zustand</th><th>Status</th></tr></thead>
+                <thead><tr><th>Kennzeichen</th><th>Muster</th><th>Sitze</th><th>Reichweite</th><th>Standort</th><th>Flugstunden</th><th>Zyklen</th><th>Zustand</th><th>Status</th></tr></thead>
                 <tbody>
                 @foreach($fleet as $aircraft)
-                    <tr>
+                    <tr data-aircraft-card
+                        data-search="{{ $aircraft->registration }} {{ $aircraft->type->manufacturer }} {{ $aircraft->type->model }} {{ $aircraft->type->variant }}"
+                        data-manufacturer="{{ $aircraft->type->manufacturer }}"
+                        data-seats="{{ (int) data_get($aircraft->configuration, 'seats', $aircraft->type->typical_seats ?? 0) }}"
+                        data-range="{{ (int) ($aircraft->type->range_km ?? 0) }}"
+                        data-status="{{ $aircraft->status }}">
                         <td><strong>{{ $aircraft->registration }}</strong></td>
                         <td>{{ $aircraft->type->manufacturer }} {{ $aircraft->type->model }}</td>
+                        <td>{{ number_format((int) data_get($aircraft->configuration, 'seats', $aircraft->type->typical_seats ?? 0), 0, ',', '.') }}</td>
+                        <td>{{ number_format((int) ($aircraft->type->range_km ?? 0), 0, ',', '.') }} km</td>
                         <td><strong>{{ $aircraft->currentAirport?->iata_code ?? ($aircraft->status === 'in_flight' ? 'Unterwegs' : '–') }}</strong></td>
                         <td>{{ number_format((float) $aircraft->flight_hours, 1, ',', '.') }} h</td>
                         <td>{{ number_format((int) $aircraft->flight_cycles, 0, ',', '.') }}</td>
