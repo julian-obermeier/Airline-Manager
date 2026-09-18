@@ -53,7 +53,10 @@
             <span class="eyebrow">AIRCRAFT CATALOGUE</span>
             <h3>Flugzeugkatalog</h3>
         </div>
-        <span class="badge">{{ $types->count() }} reale Muster</span>
+        <div class="split-actions">
+            <span class="badge">{{ $types->count() }} reale Muster</span>
+            <a class="button ghost" href="{{ route('fleet.index') }}"><x-icon name="fleet" :size="16" /> Meine Flotte</a>
+        </div>
     </div>
 
     <div class="filter-bar" data-aircraft-filter>
