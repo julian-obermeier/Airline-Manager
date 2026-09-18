@@ -46,7 +46,7 @@
                 @csrf
                 <div class="field full">
                     <label for="airport_id">Flughafen</label>
-                    <select id="airport_id" name="airport_id" required>
+                    <select id="airport_id" name="airport_id" data-searchable data-search-placeholder="Flughafen suchen…" required>
                         <option value="">Bitte auswählen</option>
                         <x-airport-options :airports="$airports" :selected="old('airport_id')" />
                     </select>
