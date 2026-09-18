@@ -76,7 +76,7 @@ class OperationsWorkflowTest extends TestCase
         $this->post(route('operations.routes.store'), [
             'origin_airport_id' => $frankfurt->id,
             'destination_airport_id' => $munich->id,
-        ])->assertRedirect('/revenue-management');
+        ])->assertRedirect('/operations');
 
         $route = $airline->routes()->firstOrFail();
 
@@ -90,7 +90,7 @@ class OperationsWorkflowTest extends TestCase
             'economy_fare' => '89.90',
             'business_fare' => '219.00',
             'first_fare' => '399.00',
-        ])->assertRedirect('/operations');
+        ])->assertRedirect('/revenue-management');
 
         $route->refresh();
         $this->assertSame(8990, (int) data_get($route->settings, 'fares.economy_minor'));
