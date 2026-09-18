@@ -32,10 +32,58 @@
 <section class="card" style="margin-top:18px">
     <div class="section-title">
         <div>
+            <span class="eyebrow">BASE FARES</span>
+            <h3>Basistarife pro Route</h3>
+        </div>
+        <span class="badge"><x-icon name="revenue" :size="14" /> Einzige Tarifverwaltung</span>
+    </div>
+
+    @if($routes->isEmpty())
+        <div class="empty">Noch keine Route vorhanden.</div>
+    @else
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead><tr><th>Route</th><th>Economy</th><th>Business</th><th>First</th><th>Aktion</th></tr></thead>
+                <tbody>
+                @foreach($routes as $route)
+                    @php($fares = $routeData->get($route->id)['fares'])
+                    <tr>
+                        <td><strong>{{ $route->origin?->iata_code }} → {{ $route->destination?->iata_code }}</strong><br><span class="muted">{{ $route->origin?->city }} → {{ $route->destination?->city }}</span></td>
+                        <td colspan="4">
+                            <form method="post" action="{{ route('revenue-management.fares.update', $route) }}" style="display:grid;grid-template-columns:repeat(3,minmax(110px,1fr)) auto;gap:8px;align-items:end;min-width:520px">
+                                @csrf
+                                @method('PATCH')
+                                <div class="field">
+                                    <label>Economy</label>
+                                    <input type="number" name="economy_fare" min="10" max="5000" step="0.01" value="{{ number_format($fares['economy_minor'] / 100, 2, '.', '') }}" required>
+                                </div>
+                                <div class="field">
+                                    <label>Business</label>
+                                    <input type="number" name="business_fare" min="0" max="10000" step="0.01" value="{{ number_format($fares['business_minor'] / 100, 2, '.', '') }}" required>
+                                </div>
+                                <div class="field">
+                                    <label>First</label>
+                                    <input type="number" name="first_fare" min="0" max="20000" step="0.01" value="{{ number_format($fares['first_minor'] / 100, 2, '.', '') }}" required>
+                                </div>
+                                <button class="button primary" type="submit">Basistarife speichern</button>
+                            </form>
+                        </td>
+                    </tr>
+                @endforeach
+                </tbody>
+            </table>
+        </div>
+        <p class="footer-note">Neue Flüge übernehmen diese Werte als Basistarife. Bei dynamischer Policy verändert das Revenue Management anschließend nur die Verkaufspreise des konkreten Fluges.</p>
+    @endif
+</section>
+
+<section class="card" style="margin-top:18px">
+    <div class="section-title">
+        <div>
             <span class="eyebrow">ROUTE POLICIES</span>
             <h3>Preisstrategie pro Route</h3>
         </div>
-        <span class="badge">Basistarif bleibt in Operations</span>
+        <span class="badge">Zentrale Preissteuerung</span>
     </div>
 
     @if($routes->isEmpty())
