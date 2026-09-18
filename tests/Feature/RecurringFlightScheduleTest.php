@@ -51,7 +51,7 @@ class RecurringFlightScheduleTest extends TestCase
         $airline = Airline::query()->where('name', 'Rotation Air')->firstOrFail();
         $type = AircraftType::query()->where('model', 'E195-E2')->firstOrFail();
 
-        $this->post(route('operations.fleet.purchase'), [
+        $this->post(route('fleet-market.new'), [
             'aircraft_type_id' => $type->id,
             'registration' => 'D-AROT',
         ])->assertRedirect('/fleet-market');
