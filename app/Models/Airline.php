@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Airline extends Model
 {
@@ -66,6 +67,16 @@ class Airline extends Model
     public function flights(): HasMany
     {
         return $this->hasMany(Flight::class);
+    }
+
+    public function reputationProfile(): HasOne
+    {
+        return $this->hasOne(AirlineReputationProfile::class);
+    }
+
+    public function marketingCampaigns(): HasMany
+    {
+        return $this->hasMany(MarketingCampaign::class);
     }
 
     public function airportStations(): HasMany
