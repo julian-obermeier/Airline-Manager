@@ -49,7 +49,7 @@ class OperationsWorkflowTest extends TestCase
         $airline = Airline::query()->where('name', 'Operations Air')->firstOrFail();
         $type = AircraftType::query()->where('model', 'E195-E2')->firstOrFail();
 
-        $this->post(route('operations.fleet.purchase'), [
+        $this->post(route('fleet-market.new'), [
             'aircraft_type_id' => $type->id,
             'registration' => 'D-AOPS',
         ])->assertRedirect('/fleet-market');
@@ -76,7 +76,7 @@ class OperationsWorkflowTest extends TestCase
         $this->post(route('operations.routes.store'), [
             'origin_airport_id' => $frankfurt->id,
             'destination_airport_id' => $munich->id,
-        ])->assertRedirect('/operations');
+        ])->assertRedirect('/revenue-management');
 
         $route = $airline->routes()->firstOrFail();
 
@@ -86,7 +86,7 @@ class OperationsWorkflowTest extends TestCase
         $this->assertGreaterThan(0, (int) data_get($route->settings, 'fares.economy_minor'));
         $this->assertGreaterThan(0, (float) data_get($route->settings, 'demand_index'));
 
-        $this->patch(route('operations.routes.fares.update', $route), [
+        $this->patch(route('revenue-management.fares.update', $route), [
             'economy_fare' => '89.90',
             'business_fare' => '219.00',
             'first_fare' => '399.00',
