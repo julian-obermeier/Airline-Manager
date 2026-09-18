@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AirlineController;
 use App\Http\Controllers\AirportOperationsController;
+use App\Http\Controllers\AircraftImageController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CrewController;
 use App\Http\Controllers\FinanceController;
@@ -47,6 +48,10 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/operations/flights', [OperationsController::class, 'scheduleFlight'])
         ->middleware('aircraft.position')
         ->name('operations.flights.store');
+
+    Route::get('/media/aircraft-types/{aircraftType}/image', AircraftImageController::class)
+        ->middleware('throttle:90,1')
+        ->name('aircraft-images.show');
 
     Route::get('/fleet', [FleetController::class, 'index'])->name('fleet.index');
     Route::post('/fleet/{aircraft}/sell', [FleetController::class, 'sell'])->name('fleet.sell');
