@@ -16,14 +16,16 @@ Artisan::command('airline:simulate', function (
     MaintenanceService $maintenance,
     ProcurementService $procurement,
     FlightLocationGuardService $locationGuard,
+    CrewService $crewService,
 ): void {
     $realNow = now();
     $locationSummary = $locationGuard->guardBeforeTick($realNow);
     $summary = $simulation->tick($realNow);
     $maintenanceSummary = ['maintenance_started' => 0, 'maintenance_completed' => 0, 'maintenance_grounded' => 0];
     $procurementSummary = ['deliveries' => 0, 'lease_payments' => 0, 'leases_ended' => 0];
+    $crewSummary = ['payroll_runs' => 0, 'salary_minor' => 0];
 
-    World::query()->where('status', 'active')->orderBy('id')->each(function (World $world) use ($maintenance, $procurement, &$maintenanceSummary, &$procurementSummary): void {
+    World::query()->where('status', 'active')->orderBy('id')->each(function (World $world) use ($maintenance, $procurement, $crewService, &$maintenanceSummary, &$procurementSummary, &$crewSummary): void {
         $world->refresh();
         $simulationNow = $world->simulated_at ?? now();
 
@@ -36,11 +38,16 @@ Artisan::command('airline:simulate', function (
         foreach ($procurementSummary as $key => $value) {
             $procurementSummary[$key] += (int) ($procurementResult[$key] ?? 0);
         }
+
+        $payrollResult = $crewService->processPayroll($world, $simulationNow);
+        foreach ($crewSummary as $key => $value) {
+            $crewSummary[$key] += (int) ($payrollResult[$key] ?? 0);
+        }
     });
 
     $this->info('Simulation tick completed.');
     $this->table(
-        ['Worlds', 'Checked', 'Boarding', 'Departed', 'In air', 'Completed', 'Location blocks', 'Maintenance', 'Deliveries', 'Lease payments'],
+        ['Worlds', 'Checked', 'Boarding', 'Departed', 'In air', 'Completed', 'Crew blocks', 'Location blocks', 'Maintenance', 'Deliveries', 'Lease payments', 'Payroll'],
         [[
             $summary['worlds'],
             $summary['flights_checked'],
@@ -48,10 +55,12 @@ Artisan::command('airline:simulate', function (
             $summary['departed'],
             $summary['in_air'],
             $summary['completed'],
+            $summary['crew_cancelled'],
             $locationSummary['cancelled_location'],
             $maintenanceSummary['maintenance_started'] + $maintenanceSummary['maintenance_completed'],
             $procurementSummary['deliveries'],
             $procurementSummary['lease_payments'],
+            $crewSummary['payroll_runs'],
         ]]
     );
-})->purpose('Advance world clocks and process flights, location integrity, maintenance, deliveries and leasing');
+})->purpose('Advance world clocks and process flights, crew, location integrity, maintenance, deliveries, leasing and payroll');
