@@ -2,6 +2,7 @@
 
 use App\Models\Airline;
 use App\Models\World;
+use App\Services\Commercial\MarketCompetitionService;
 use App\Services\Commercial\MarketingService;
 use App\Services\Operations\AirportOperationsService;
 use App\Services\Operations\CrewService;
@@ -122,3 +123,27 @@ Artisan::command('airline:marketing-backfill', function (MarketingService $marke
         [[$summary['airlines'], $summary['route_metrics_created']]]
     );
 })->purpose('Backfill reputation profiles and route commercial metrics');
+
+
+Artisan::command('airline:competition-backfill', function (MarketCompetitionService $competition): void {
+    $summary = ['airlines' => 0, 'markets' => 0];
+
+    Airline::query()
+        ->with('world')
+        ->where('status', 'active')
+        ->orderBy('id')
+        ->each(function (Airline $airline) use ($competition, &$summary): void {
+            $summary['airlines']++;
+            $result = $competition->backfillAirline(
+                $airline,
+                $airline->world?->simulated_at ?? now()
+            );
+            $summary['markets'] += (int) ($result['markets'] ?? 0);
+        });
+
+    $this->info('Competition and market share backfill completed.');
+    $this->table(
+        ['Airlines', 'Markets calculated'],
+        [[$summary['airlines'], $summary['markets']]]
+    );
+})->purpose('Backfill current route competition scores and market shares');
