@@ -135,7 +135,7 @@
                 <select id="new_aircraft_type_id" name="aircraft_type_id" data-searchable data-search-placeholder="Hersteller oder Flugzeugtyp suchen…" required>
                     <option value="">Bitte auswählen</option>
                     @foreach($newTypes as $type)
-                        <option value="{{ $type->id }}">{{ $type->manufacturer }} {{ $type->model }} · {{ $type->typical_seats }} Sitze · {{ number_format($type->reference_purchase_price_minor / 100, 0, ',', '.') }} {{ $type->reference_currency }}</option>
+                        <option value="{{ $type->id }}">{{ $type->manufacturer }} {{ $type->model }} · {{ $type->typical_seats }} Sitze · {{ number_format($type->range_km, 0, ',', '.') }} km · {{ number_format($type->reference_purchase_price_minor / 100, 0, ',', '.') }} {{ $type->reference_currency }}</option>
                     @endforeach
                 </select>
                 <span class="help">Kaufpreis wird bei Bestellung gebucht; Nutzung erst nach Auslieferung.</span>
@@ -163,7 +163,7 @@
                     <option value="">Bitte auswählen</option>
                     @foreach($newTypes as $type)
                         @php($monthly = (int) ceil($type->reference_purchase_price_minor * 0.0085))
-                        <option value="{{ $type->id }}">{{ $type->manufacturer }} {{ $type->model }} · ca. {{ number_format($monthly / 100, 0, ',', '.') }} {{ $type->reference_currency }}/Monat</option>
+                        <option value="{{ $type->id }}">{{ $type->manufacturer }} {{ $type->model }} · {{ $type->typical_seats }} Sitze · {{ number_format($type->range_km, 0, ',', '.') }} km · ca. {{ number_format($monthly / 100, 0, ',', '.') }} {{ $type->reference_currency }}/Monat</option>
                     @endforeach
                 </select>
             </div>
