@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AircraftProcurement;
 use App\Models\Airline;
+use App\Models\CrewMember;
 use App\Models\LedgerAccount;
 use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
@@ -116,6 +117,90 @@ class FinanceController extends Controller
             ->where('status', 'delivered')
             ->sum('monthly_payment_minor');
 
+        $monthlyPayrollMinor = (int) CrewMember::query()
+            ->where('world_id', $world->id)
+            ->where('airline_id', $airline->id)
+            ->where('status', 'active')
+            ->sum('monthly_salary_minor');
+
+        $monthlyFixedCommitmentMinor = $monthlyLeaseCommitmentMinor + $monthlyPayrollMinor;
+        $netAssetValueMinor = $assetValueMinor - $liabilityValueMinor;
+        $operatingMarginPercent = $revenueMinor > 0
+            ? round(($operatingResultMinor / $revenueMinor) * 100, 1)
+            : 0.0;
+        $averageDailyExpenseMinor = $days > 0
+            ? (int) round($expenseMinor / $days)
+            : 0;
+        $cashRunwayDays = $averageDailyExpenseMinor > 0
+            ? (int) floor(max(0, $cashBalanceMinor) / $averageDailyExpenseMinor)
+            : null;
+
+        $expenseMix = $expenseAccounts
+            ->sortByDesc('amount_minor')
+            ->values()
+            ->map(function (array $account) use ($expenseMinor): array {
+                return $account + [
+                    'share_percent' => $expenseMinor > 0
+                        ? round(($account['amount_minor'] / $expenseMinor) * 100, 1)
+                        : 0.0,
+                ];
+            });
+
+        $periodTransactions = LedgerTransaction::query()
+            ->with(['entries.account'])
+            ->where('world_id', $world->id)
+            ->where('airline_id', $airline->id)
+            ->whereBetween('occurred_at', [$from, $asOf])
+            ->orderBy('occurred_at')
+            ->get();
+
+        $dailyPerformance = $periodTransactions
+            ->groupBy(fn (LedgerTransaction $transaction): string => $transaction->occurred_at->toDateString())
+            ->map(function ($transactions, string $date): array {
+                $revenue = 0;
+                $expense = 0;
+                $cash = 0;
+
+                foreach ($transactions as $transaction) {
+                    foreach ($transaction->entries as $entry) {
+                        $type = $entry->account?->type;
+                        $amount = (int) $entry->amount_minor;
+
+                        if ($type === 'income') {
+                            $revenue += -$amount;
+                        } elseif ($type === 'expense') {
+                            $expense += $amount;
+                        }
+
+                        if ($entry->account?->code === 'CASH') {
+                            $cash += $amount;
+                        }
+                    }
+                }
+
+                return [
+                    'date' => $date,
+                    'revenue_minor' => max(0, $revenue),
+                    'expense_minor' => max(0, $expense),
+                    'result_minor' => $revenue - $expense,
+                    'cash_effect_minor' => $cash,
+                ];
+            })
+            ->values();
+
+        $maxDailyActivityMinor = max(
+            1,
+            (int) $dailyPerformance->max(fn (array $row): int => max($row['revenue_minor'], $row['expense_minor']))
+        );
+
+        $healthScore = 0;
+        $healthScore += $cashBalanceMinor > 0 ? 20 : 0;
+        $healthScore += $operatingResultMinor >= 0 ? 25 : 0;
+        $healthScore += $cashFlowMinor >= 0 ? 20 : 0;
+        $healthScore += $assetValueMinor > 0 && $liabilityValueMinor <= ($assetValueMinor * 0.60) ? 15 : 5;
+        $healthScore += $cashRunwayDays === null || $cashRunwayDays >= 90 ? 20 : ($cashRunwayDays >= 30 ? 12 : 4);
+        $healthScore = min(100, max(0, $healthScore));
+
         $recentTransactions = LedgerTransaction::query()
             ->with(['entries.account'])
             ->where('world_id', $world->id)
@@ -163,6 +248,16 @@ class FinanceController extends Controller
             'accountBalances' => $accountBalances,
             'leaseContracts' => $leaseContracts,
             'monthlyLeaseCommitmentMinor' => $monthlyLeaseCommitmentMinor,
+            'monthlyPayrollMinor' => $monthlyPayrollMinor,
+            'monthlyFixedCommitmentMinor' => $monthlyFixedCommitmentMinor,
+            'netAssetValueMinor' => $netAssetValueMinor,
+            'operatingMarginPercent' => $operatingMarginPercent,
+            'averageDailyExpenseMinor' => $averageDailyExpenseMinor,
+            'cashRunwayDays' => $cashRunwayDays,
+            'expenseMix' => $expenseMix,
+            'dailyPerformance' => $dailyPerformance,
+            'maxDailyActivityMinor' => $maxDailyActivityMinor,
+            'healthScore' => $healthScore,
             'recentTransactions' => $recentTransactions,
         ]);
     }
