@@ -44,6 +44,11 @@ class GameBootstrapSeeder extends Seeder
             ['icao_code' => 'EGLL', 'iata_code' => 'LHR', 'name' => 'London Heathrow Airport', 'city' => 'London', 'country_code' => 'GB', 'latitude' => 51.470000, 'longitude' => -0.454300, 'timezone' => 'Europe/London', 'elevation_ft' => 83],
         ];
 
+        $airports = array_merge(
+            $airports,
+            require database_path('seeders/data/airports.php')
+        );
+
         $slotCapacities = [
             'FRA' => 20,
             'MUC' => 18,
@@ -58,6 +63,11 @@ class GameBootstrapSeeder extends Seeder
         ];
 
         foreach ($airports as $airport) {
+            $slotCapacity = (int) ($airport['slot_capacity_15min']
+                ?? $slotCapacities[$airport['iata_code']]
+                ?? 12);
+            unset($airport['slot_capacity_15min']);
+
             Airport::query()->updateOrCreate(
                 ['icao_code' => $airport['icao_code']],
                 $airport + [
@@ -67,7 +77,7 @@ class GameBootstrapSeeder extends Seeder
                     'operational_restrictions' => null,
                     'metadata' => [
                         'bootstrap' => true,
-                        'slot_capacity_15min' => $slotCapacities[$airport['iata_code']] ?? 12,
+                        'slot_capacity_15min' => $slotCapacity,
                     ],
                 ]
             );
@@ -80,19 +90,31 @@ class GameBootstrapSeeder extends Seeder
             ['manufacturer' => 'Boeing', 'model' => '737 MAX 8', 'variant' => '737-8', 'icao_type_code' => 'B38M', 'typical_seats' => 178, 'max_seats' => 210, 'range_km' => 6570, 'cruise_speed_kmh' => 842, 'minimum_runway_m' => 2100, 'max_payload_kg' => 20200, 'fuel_capacity_l' => 25816, 'reference_purchase_price_minor' => 5200000000, 'fuel_burn_l_per_hour' => 2600],
         ];
 
+        $aircraftTypes = array_merge(
+            $aircraftTypes,
+            require database_path('seeders/data/aircraft_types.php')
+        );
+
         foreach ($aircraftTypes as $type) {
             $fuelBurn = $type['fuel_burn_l_per_hour'];
-            unset($type['fuel_burn_l_per_hour']);
+            $visualGroup = $type['visual_group'] ?? 'narrowbody';
+            $productionStatus = $type['production_status'] ?? 'active';
+            unset(
+                $type['fuel_burn_l_per_hour'],
+                $type['visual_group'],
+                $type['production_status']
+            );
 
             AircraftType::query()->updateOrCreate(
                 ['manufacturer' => $type['manufacturer'], 'model' => $type['model'], 'variant' => $type['variant']],
                 $type + [
                     'reference_currency' => 'EUR',
-                    'production_status' => 'active',
+                    'production_status' => $productionStatus,
                     'technical_data' => [
                         'bootstrap' => true,
                         'pricing' => 'game_reference',
                         'fuel_burn_l_per_hour' => $fuelBurn,
+                        'visual_group' => $visualGroup,
                     ],
                 ]
             );
