@@ -65,6 +65,8 @@ class WorldMapController extends Controller
                 'name' => $airport->name,
                 'city' => $airport->city,
                 'country_code' => $airport->country_code,
+                'latitude' => (float) $airport->latitude,
+                'longitude' => (float) $airport->longitude,
                 'x' => $x,
                 'y' => $y,
                 'network' => $networkAirportIds->contains($airport->id),
@@ -117,6 +119,8 @@ class WorldMapController extends Controller
 
             $x = $origin['x'] + (($destination['x'] - $origin['x']) * $progress);
             $y = $origin['y'] + (($destination['y'] - $origin['y']) * $progress);
+            $latitude = $origin['latitude'] + (($destination['latitude'] - $origin['latitude']) * $progress);
+            $longitude = $origin['longitude'] + (($destination['longitude'] - $origin['longitude']) * $progress);
 
             return [
                 'id' => $flight->id,
@@ -127,6 +131,8 @@ class WorldMapController extends Controller
                 'origin' => $origin['iata'],
                 'destination' => $destination['iata'],
                 'progress_percent' => (int) round($progress * 100),
+                'latitude' => round($latitude, 6),
+                'longitude' => round($longitude, 6),
                 'x' => round($x, 2),
                 'y' => round($y, 2),
             ];
