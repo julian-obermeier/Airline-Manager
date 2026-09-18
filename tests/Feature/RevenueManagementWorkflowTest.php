@@ -86,7 +86,7 @@ class RevenueManagementWorkflowTest extends TestCase
             'economy_fare' => '100.00',
             'business_fare' => '220.00',
             'first_fare' => '0.00',
-        ])->assertRedirect(route('operations.index'));
+        ])->assertRedirect(route('revenue-management.index'));
 
         $this->patch(route('revenue-management.policy.update', $route), [
             'mode' => 'dynamic',
