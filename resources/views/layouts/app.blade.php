@@ -116,5 +116,6 @@
 @else
     @yield('guest')
 @endif
+<script src="{{ asset('assets/airline-empire.js') }}" defer></script>
 </body>
 </html>
