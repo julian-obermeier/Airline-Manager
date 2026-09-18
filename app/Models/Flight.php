@@ -75,4 +75,9 @@ class Flight extends Model
     {
         return $this->hasMany(AirportSlotReservation::class);
     }
+
+    public function fareEvents(): HasMany
+    {
+        return $this->hasMany(FlightFareEvent::class);
+    }
 }
