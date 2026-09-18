@@ -68,6 +68,16 @@ class Airline extends Model
         return $this->hasMany(Flight::class);
     }
 
+    public function airportStations(): HasMany
+    {
+        return $this->hasMany(AirlineAirportStation::class);
+    }
+
+    public function slotReservations(): HasMany
+    {
+        return $this->hasMany(AirportSlotReservation::class);
+    }
+
     public function crewMembers(): HasMany
     {
         return $this->hasMany(CrewMember::class);
