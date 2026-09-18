@@ -41,9 +41,7 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/dashboard', [GameController::class, 'dashboard'])->name('dashboard');
 
     Route::get('/operations', [OperationsController::class, 'index'])->name('operations.index');
-    Route::post('/operations/fleet/purchase', [FleetMarketController::class, 'orderNew'])->name('operations.fleet.purchase');
     Route::post('/operations/routes', [OperationsController::class, 'storeRoute'])->name('operations.routes.store');
-    Route::patch('/operations/routes/{route}/fares', [OperationsController::class, 'updateRouteFares'])->name('operations.routes.fares.update');
     Route::post('/operations/flights', [OperationsController::class, 'scheduleFlight'])
         ->middleware('aircraft.position')
         ->name('operations.flights.store');
@@ -70,6 +68,7 @@ Route::middleware('auth')->group(function (): void {
     Route::patch('/maintenance/{event}/cancel', [MaintenanceController::class, 'cancel'])->name('maintenance.cancel');
 
     Route::get('/revenue-management', [RevenueManagementController::class, 'index'])->name('revenue-management.index');
+    Route::patch('/revenue-management/routes/{route}/fares', [RevenueManagementController::class, 'updateBaseFares'])->name('revenue-management.fares.update');
     Route::patch('/revenue-management/routes/{route}/policy', [RevenueManagementController::class, 'updatePolicy'])->name('revenue-management.policy.update');
     Route::post('/revenue-management/flights/{flight}/reprice', [RevenueManagementController::class, 'reprice'])->name('revenue-management.flights.reprice');
 
