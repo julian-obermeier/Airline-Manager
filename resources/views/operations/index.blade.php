@@ -231,7 +231,7 @@
     @endif
 </section>
 
-<section class="card" style="margin-top:18px">
+<section class="card game-panel" style="margin-top:18px" data-table-filter>
     <div class="section-title">
         <div>
             <span class="eyebrow">NETWORK STATUS</span>
@@ -239,32 +239,55 @@
         </div>
         <div class="split-actions">
             <span class="badge">{{ $routes->count() }} Routen</span>
-            <a class="button ghost" href="{{ route('revenue-management.index') }}">Tarife verwalten <x-icon name="arrow" :size="15" /></a>
+            <a class="button ghost" href="{{ route('map.index') }}"><x-icon name="map" :size="15" /> Karte</a>
+            <a class="button ghost" href="{{ route('revenue-management.index') }}"><x-icon name="revenue" :size="15" /> Tarife</a>
         </div>
     </div>
 
     @if($routes->isEmpty())
         <div class="empty">Noch keine Route vorhanden.</div>
     @else
-        <div class="table-wrap">
-            <table class="data-table">
-                <thead><tr><th>Route</th><th>Distanz</th><th>Blockzeit</th><th>Nachfrageindex</th><th>Flüge</th><th>Status</th></tr></thead>
-                <tbody>
-                @foreach($routes as $route)
-                    <tr>
-                        <td>
-                            <strong>{{ $route->origin->iata_code }} → {{ $route->destination->iata_code }}</strong><br>
-                            <span class="muted">{{ $route->origin->city }} → {{ $route->destination->city }}</span>
-                        </td>
-                        <td>{{ number_format((float) $route->distance_km, 0, ',', '.') }} km</td>
-                        <td>{{ intdiv($route->planned_block_minutes, 60) }}h {{ $route->planned_block_minutes % 60 }}m</td>
-                        <td><span class="badge">{{ number_format((float) data_get($route->settings, 'demand_index', 1), 2, ',', '.') }}</span></td>
-                        <td>{{ $route->flights_count }}</td>
-                        <td><span class="badge">{{ $route->status === 'active' ? 'Aktiv' : ucfirst($route->status) }}</span></td>
-                    </tr>
-                @endforeach
-                </tbody>
-            </table>
+        <div class="filter-bar">
+            <div class="field search">
+                <label>Routen suchen</label>
+                <input type="search" data-table-search placeholder="FRA, MUC, Frankfurt, München…">
+            </div>
+            <div><span class="game-label">Treffer</span><div class="filter-count" data-table-count>{{ $routes->count() }}</div></div>
+        </div>
+
+        <div class="route-card-grid">
+            @foreach($routes as $route)
+                <article class="route-game-card"
+                         data-filter-row
+                         data-search="{{ $route->origin->iata_code }} {{ $route->destination->iata_code }} {{ $route->origin->city }} {{ $route->destination->city }}">
+                    <div class="route-strip">
+                        <div class="route-airport">
+                            <strong>{{ $route->origin->iata_code }}</strong>
+                            <span class="route-meta">{{ $route->origin->city }}</span>
+                        </div>
+                        <div class="route-line"></div>
+                        <div class="route-airport" style="text-align:right">
+                            <strong>{{ $route->destination->iata_code }}</strong>
+                            <span class="route-meta">{{ $route->destination->city }}</span>
+                        </div>
+                    </div>
+
+                    <div class="route-card-stats">
+                        <div><span>Distanz</span><strong>{{ number_format((float) $route->distance_km, 0, ',', '.') }} km</strong></div>
+                        <div><span>Blockzeit</span><strong>{{ intdiv($route->planned_block_minutes, 60) }}h {{ $route->planned_block_minutes % 60 }}m</strong></div>
+                        <div><span>Nachfrage</span><strong>{{ number_format((float) data_get($route->settings, 'demand_index', 1), 2, ',', '.') }}</strong></div>
+                        <div><span>Flüge</span><strong>{{ $route->flights_count }}</strong></div>
+                    </div>
+
+                    <div class="route-card-footer">
+                        <span class="badge">{{ $route->status === 'active' ? 'Aktiv' : ucfirst($route->status) }}</span>
+                        <div class="split-actions">
+                            <a class="button ghost" href="{{ route('market.index') }}">Markt</a>
+                            <a class="button ghost" href="{{ route('revenue-management.index') }}">Preise</a>
+                        </div>
+                    </div>
+                </article>
+            @endforeach
         </div>
     @endif
 </section>
