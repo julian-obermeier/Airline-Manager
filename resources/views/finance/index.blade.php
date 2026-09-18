@@ -269,7 +269,7 @@
 
     <article class="card">
         <div class="section-title">
-            <div><span class="eyebrow">FIXED COMMITMENTS · LEASINGVERPFLICHTUNGEN</span><h3>Monatliche Verpflichtungen</h3></div>
+            <div><span class="eyebrow">FIXED COMMITMENTS</span><h3>Monatliche Verpflichtungen</h3><span class="game-label">Leasingverpflichtungen & Payroll</span></div>
             <span class="badge">{{ number_format($monthlyFixedCommitmentMinor / 100, 0, ',', '.') }} {{ $airline->base_currency }}</span>
         </div>
         <div class="list">
