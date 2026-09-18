@@ -13,6 +13,7 @@ use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
 use App\Models\World;
 use App\Services\Commercial\RevenueManagementService;
+use App\Services\Operations\AirportOperationsService;
 use App\Services\Operations\CrewService;
 use App\Services\Operations\MaintenanceService;
 use Carbon\Carbon;
@@ -29,6 +30,7 @@ class OperationsController extends Controller
         private readonly RevenueManagementService $revenueManagement,
         private readonly MaintenanceService $maintenance,
         private readonly CrewService $crewService,
+        private readonly AirportOperationsService $airportOperations,
     ) {
     }
 
@@ -247,6 +249,17 @@ class OperationsController extends Controller
         $distanceKm = $this->distanceKm($origin, $destination);
         $plannedBlockMinutes = max(45, (int) ceil(($distanceKm / 780) * 60) + 45);
 
+        $this->airportOperations->ensureStation(
+            $airline,
+            $origin,
+            $origin->id === $airline->home_airport_id ? 'base' : 'outstation'
+        );
+        $this->airportOperations->ensureStation(
+            $airline,
+            $destination,
+            $destination->id === $airline->home_airport_id ? 'base' : 'outstation'
+        );
+
         AirlineRoute::create([
             'world_id' => $world->id,
             'airline_id' => $airline->id,
@@ -341,6 +354,8 @@ class OperationsController extends Controller
         $departure = Carbon::parse($validated['scheduled_departure_at']);
         $arrival = $departure->copy()->addMinutes($route->planned_block_minutes);
 
+        $this->airportOperations->assertSlotsAvailable($world, $route, $departure, $arrival);
+
         if ($this->maintenance->hasMaintenanceConflict($aircraft, $departure, $arrival)) {
             throw ValidationException::withMessages([
                 'scheduled_departure_at' => 'Der Flug überschneidet sich mit einem geplanten Wartungsfenster dieses Flugzeugs.',
@@ -411,6 +426,7 @@ class OperationsController extends Controller
             ],
         ]);
 
+        $this->airportOperations->reserveFlight($flight);
         $crewSnapshot = $this->crewService->assignCrew($flight);
         $crewMessage = $crewSnapshot['complete']
             ? ' Crew wurde automatisch vollständig zugewiesen.'
