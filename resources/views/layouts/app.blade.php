@@ -7,6 +7,7 @@
     <meta name="theme-color" content="#f5f7fb">
     <title>@yield('title', 'Airline Empire')</title>
     <link rel="stylesheet" href="{{ asset('assets/airline-empire.css') }}">
+    @stack('head')
 </head>
 <body>
 @if(auth()->check())
@@ -116,6 +117,7 @@
 @else
     @yield('guest')
 @endif
+@stack('scripts')
 <script src="{{ asset('assets/airline-empire.js') }}" defer></script>
 </body>
 </html>
