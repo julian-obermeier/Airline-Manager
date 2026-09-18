@@ -108,7 +108,13 @@
                      data-seats="{{ (int) $type->typical_seats }}"
                      data-range="{{ (int) $type->range_km }}"
                      data-status="{{ $type->production_status }}">
-                <x-aircraft-visual :group="$visualGroup" :label="$type->icao_type_code ?? $type->model" />
+                <x-aircraft-visual
+                    :group="$visualGroup"
+                    :label="$type->icao_type_code ?? $type->model"
+                    :type-id="$type->id"
+                    :manufacturer="$type->manufacturer"
+                    :model="$type->model"
+                />
                 <div class="aircraft-card-body">
                     <h4>{{ $type->manufacturer }} {{ $type->model }}</h4>
                     <div class="aircraft-card-sub">{{ $type->variant }} · {{ $type->production_status === 'active' ? 'in Produktion' : 'Bestandsmuster' }}</div>
