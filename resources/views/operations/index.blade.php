@@ -93,14 +93,14 @@
             @csrf
             <div class="field full">
                 <label for="origin_airport_id">Startflughafen</label>
-                <select id="origin_airport_id" name="origin_airport_id" required>
+                <select id="origin_airport_id" name="origin_airport_id" data-searchable data-search-placeholder="Startflughafen suchen…" required>
                     <option value="">Bitte auswählen</option>
                     <x-airport-options :airports="$airports" :selected="old('origin_airport_id', $airline->home_airport_id)" />
                 </select>
             </div>
             <div class="field full">
                 <label for="destination_airport_id">Zielflughafen</label>
-                <select id="destination_airport_id" name="destination_airport_id" required>
+                <select id="destination_airport_id" name="destination_airport_id" data-searchable data-search-placeholder="Zielflughafen suchen…" required>
                     <option value="">Bitte auswählen</option>
                     <x-airport-options :airports="$airports" :selected="old('destination_airport_id')" />
                 </select>
@@ -139,7 +139,7 @@
                 </div>
                 <div class="field">
                     <label for="aircraft_id">Flugzeug</label>
-                    <select id="aircraft_id" name="aircraft_id" required>
+                    <select id="aircraft_id" name="aircraft_id" data-searchable data-search-placeholder="Flugzeug nach Kennzeichen oder Typ suchen…" required>
                         <option value="">Bitte auswählen</option>
                         @foreach($fleet as $aircraft)
                             <option value="{{ $aircraft->id }}" @selected(old('aircraft_id') === $aircraft->id)>
