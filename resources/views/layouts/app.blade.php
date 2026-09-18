@@ -30,6 +30,7 @@
             <a class="{{ request()->routeIs('maintenance.*') ? 'active' : '' }}" href="{{ route('maintenance.index') }}">Maintenance</a>
             <a class="{{ request()->routeIs('map.*') ? 'active' : '' }}" href="{{ route('map.index') }}">Weltkarte</a>
             <a class="{{ request()->routeIs('marketing.*') ? 'active' : '' }}" href="{{ route('marketing.index') }}">Marketing</a>
+            <a class="{{ request()->routeIs('market.*') ? 'active' : '' }}" href="{{ route('market.index') }}">Markt & Konkurrenz</a>
             <a class="{{ request()->routeIs('finance.*') ? 'active' : '' }}" href="{{ route('finance.index') }}">Finanzen</a>
             <a class="{{ request()->routeIs('worlds.*') ? 'active' : '' }}" href="{{ route('worlds.index') }}">Spielwelten</a>
         </nav>
