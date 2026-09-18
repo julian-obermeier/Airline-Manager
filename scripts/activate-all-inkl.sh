@@ -66,6 +66,7 @@ fi
 "$PHP_BIN" artisan airline:airport-backfill
 "$PHP_BIN" artisan airline:marketing-backfill
 "$PHP_BIN" artisan airline:competition-backfill
+"$PHP_BIN" artisan airline:revenue-backfill
 "$PHP_BIN" artisan config:cache
 "$PHP_BIN" artisan route:cache
 "$PHP_BIN" artisan view:cache
