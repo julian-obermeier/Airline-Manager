@@ -10,6 +10,7 @@ use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
 use App\Models\World;
 use App\Services\Commercial\RevenueManagementService;
+use App\Services\Operations\AirportOperationsService;
 use App\Services\Operations\CrewService;
 use App\Services\Operations\FlightScheduleService;
 use Carbon\Carbon;
@@ -21,6 +22,7 @@ class FlightSimulationService
         private readonly RevenueManagementService $revenueManagement,
         private readonly FlightScheduleService $flightSchedules,
         private readonly CrewService $crewService,
+        private readonly AirportOperationsService $airportOperations,
     ) {
     }
 
@@ -451,6 +453,7 @@ class FlightSimulationService
             }
 
             $this->crewService->completeFlight($locked);
+            $this->airportOperations->markFlightSlotsUsed($locked);
             $completed = true;
         });
 
@@ -491,7 +494,8 @@ class FlightSimulationService
         $fuelCostMinor = $fuelLiters * (int) config('simulation.fuel_price_minor_per_liter', 88);
         $seats = max(1, (int) data_get($flight->aircraft?->configuration, 'seats', $flight->aircraft?->type?->typical_seats ?? 1));
         $operatingCostMinor = (int) round(150000 + ($seats * 350) + ($distanceKm * 60));
-        $profitMinor = $revenueMinor - $fuelCostMinor - $operatingCostMinor;
+        $airportFees = $this->airportOperations->airportFeesForFlight($flight);
+        $profitMinor = $revenueMinor - $fuelCostMinor - $operatingCostMinor - $airportFees['total_minor'];
 
         return [
             'passengers' => $passengers,
@@ -502,6 +506,8 @@ class FlightSimulationService
             'fuel_liters' => $fuelLiters,
             'fuel_cost_minor' => $fuelCostMinor,
             'operating_cost_minor' => $operatingCostMinor,
+            'airport_fees_minor' => $airportFees['total_minor'],
+            'airport_fees' => $airportFees,
             'profit_minor' => $profitMinor,
         ];
     }
@@ -522,6 +528,7 @@ class FlightSimulationService
         $revenue = $this->account($airline, 'FLIGHT_REVENUE', 'Flugumsätze', 'income');
         $fuelExpense = $this->account($airline, 'FUEL_EXPENSE', 'Treibstoffkosten', 'expense');
         $operatingExpense = $this->account($airline, 'FLIGHT_OPERATING_EXPENSE', 'Flugbetriebskosten', 'expense');
+        $airportExpense = $this->account($airline, 'AIRPORT_FEES', 'Flughafen- und Slotgebühren', 'expense');
 
         $transaction = LedgerTransaction::create([
             'world_id' => $flight->world_id,
@@ -535,7 +542,10 @@ class FlightSimulationService
             'metadata' => $economics,
         ]);
 
-        $netCashMinor = $economics['revenue_minor'] - $economics['fuel_cost_minor'] - $economics['operating_cost_minor'];
+        $netCashMinor = $economics['revenue_minor']
+            - $economics['fuel_cost_minor']
+            - $economics['operating_cost_minor']
+            - ($economics['airport_fees_minor'] ?? 0);
 
         LedgerEntry::create([
             'ledger_transaction_id' => $transaction->id,
@@ -559,8 +569,17 @@ class FlightSimulationService
             'ledger_transaction_id' => $transaction->id,
             'ledger_account_id' => $operatingExpense->id,
             'amount_minor' => $economics['operating_cost_minor'],
-            'memo' => 'Handling, Flughafen- und operative Kosten',
+            'memo' => 'Operative Flugkosten',
         ]);
+
+        if (($economics['airport_fees_minor'] ?? 0) > 0) {
+            LedgerEntry::create([
+                'ledger_transaction_id' => $transaction->id,
+                'ledger_account_id' => $airportExpense->id,
+                'amount_minor' => $economics['airport_fees_minor'],
+                'memo' => 'Airport- und Slotgebühren',
+            ]);
+        }
     }
 
     private function account(Airline $airline, string $code, string $name, string $type): LedgerAccount
