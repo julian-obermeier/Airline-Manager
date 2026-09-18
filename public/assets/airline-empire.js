@@ -94,4 +94,68 @@
     input?.addEventListener('input', apply);
     apply();
   });
+}
+
+  const loadAircraftPhoto = async (root) => {
+    if (root.dataset.photoLoaded === '1' || root.dataset.photoLoading === '1') return;
+
+    const endpoint = root.dataset.imageEndpoint;
+    const image = root.querySelector('[data-aircraft-photo-img]');
+    const credit = root.querySelector('[data-aircraft-photo-credit]');
+
+    if (!endpoint || !image) return;
+
+    root.dataset.photoLoading = '1';
+
+    try {
+      const response = await fetch(endpoint, {
+        headers: { Accept: 'application/json' },
+        credentials: 'same-origin'
+      });
+
+      if (!response.ok) throw new Error('Aircraft photo unavailable');
+
+      const data = await response.json();
+      if (!data.found || !data.image_url) throw new Error('Aircraft photo not found');
+
+      await new Promise((resolve, reject) => {
+        image.onload = resolve;
+        image.onerror = reject;
+        image.src = data.image_url;
+      });
+
+      if (data.aircraft) image.alt = data.aircraft;
+
+      if (credit && data.source_url) {
+        const parts = [data.provider || 'Wikimedia Commons'];
+        if (data.license) parts.push(data.license);
+        credit.textContent = parts.join(' · ');
+        credit.href = data.source_url;
+      }
+
+      root.classList.add('has-photo');
+      root.dataset.photoLoaded = '1';
+    } catch (_) {
+      root.classList.add('photo-fallback');
+    } finally {
+      delete root.dataset.photoLoading;
+    }
+  };
+
+  const aircraftPhotos = [...document.querySelectorAll('[data-aircraft-photo]')];
+
+  if ('IntersectionObserver' in window) {
+    const photoObserver = new IntersectionObserver((entries, observer) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        observer.unobserve(entry.target);
+        loadAircraftPhoto(entry.target);
+      });
+    }, { rootMargin: '320px 0px' });
+
+    aircraftPhotos.forEach((root) => photoObserver.observe(root));
+  } else {
+    aircraftPhotos.forEach(loadAircraftPhoto);
+  }
+
 })();
