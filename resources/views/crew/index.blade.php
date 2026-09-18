@@ -53,13 +53,14 @@
 
         <form method="post" action="{{ route('crew.store') }}" class="form-grid">
             @csrf
-            <div class="field">
-                <label for="first_name">Vorname</label>
-                <input id="first_name" name="first_name" value="{{ old('first_name') }}" maxlength="80" required>
-            </div>
-            <div class="field">
-                <label for="last_name">Nachname</label>
-                <input id="last_name" name="last_name" value="{{ old('last_name') }}" maxlength="80" required>
+            <div class="field full">
+                <div class="finance-score">
+                    <div class="metric-icon" style="margin:0"><x-icon name="crew" :size="19" /></div>
+                    <div>
+                        <strong>Fiktive Personalakte wird automatisch erstellt</strong>
+                        <div class="muted" style="margin-top:3px">Vor- und Nachname sowie Personalnummer generiert Airline Empire automatisch.</div>
+                    </div>
+                </div>
             </div>
             <div class="field">
                 <label for="role">Funktion</label>
@@ -93,7 +94,7 @@
                 <span class="help">Für Captain und First Officer zwingend; Cabin Crew kann ohne Type Rating eingestellt werden.</span>
             </div>
             <div class="field full">
-                <button class="button primary" type="submit">Mitarbeiter verbindlich einstellen</button>
+                <button class="button primary" type="submit"><x-icon name="crew" :size="17" /> Fiktiven Mitarbeiter einstellen</button>
             </div>
         </form>
 
