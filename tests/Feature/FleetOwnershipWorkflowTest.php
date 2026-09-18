@@ -108,6 +108,6 @@ class FleetOwnershipWorkflowTest extends TestCase
 
         $this->get(route('fleet.index'))
             ->assertOk()
-            ->assertDontSee('D-AFLT');
+            ->assertViewHas('fleetRows', fn ($rows): bool => $rows->isEmpty());
     }
 }
