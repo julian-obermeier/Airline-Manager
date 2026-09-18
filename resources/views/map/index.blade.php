@@ -38,6 +38,7 @@
     .airport-marker.home{width:38px;height:38px;border-color:#059669;color:#047857;background:#ecfdf5}
     .flight-marker{display:grid;place-items:center;width:38px;height:38px;border-radius:12px;background:#fff7ed;border:2px solid #f59e0b;color:#c2410c;box-shadow:0 5px 15px rgba(194,65,12,.18);font-size:18px;transform:rotate(18deg)}
     .map-popup-title{font-weight:850;margin-bottom:3px}.map-popup-meta{color:#64748b;font-size:12px}
+    .map-popup-action{display:inline-flex;margin-top:9px;padding:7px 9px;border-radius:8px;background:#2563eb;color:#fff!important;font-size:12px;font-weight:800;text-decoration:none}
     .leaflet-popup-content-wrapper{border-radius:12px;box-shadow:0 12px 30px rgba(15,23,42,.14)}
 </style>
 @endpush
@@ -216,6 +217,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const airports = @json($mapAirports->values());
     const routes = @json($mapRoutes);
     const flights = @json($mapFlights);
+    const plannerBaseUrl = @json(route('route-planner.index'));
+    const plannerOriginId = @json($airline->home_airport_id);
 
     if (!window.L || !document.getElementById('airline-world-map')) return;
 
@@ -248,10 +251,17 @@ document.addEventListener('DOMContentLoaded', () => {
             opacity: airport.network ? 1 : .72
         }).addTo(map);
 
+        const plannerHref = plannerBaseUrl
+            + '?origin=' + encodeURIComponent(plannerOriginId)
+            + '&destination=' + encodeURIComponent(airport.id);
+
         marker.bindPopup(
             '<div class="map-popup-title">'+airport.iata+' / '+airport.icao+'</div>'+
             '<div>'+airport.name+'</div>'+
-            '<div class="map-popup-meta">'+airport.city+' · '+airport.country_code+'</div>'
+            '<div class="map-popup-meta">'+airport.city+' · '+airport.country_code+'</div>'+
+            (airport.id !== plannerOriginId
+                ? '<a class="map-popup-action" href="'+plannerHref+'">Strecke analysieren →</a>'
+                : '<div class="map-popup-meta" style="margin-top:7px">Heimatbasis deiner Airline</div>')
         );
         airportMarkers.set(airport.id, marker);
         if (airport.network) networkBounds.push([airport.latitude, airport.longitude]);
