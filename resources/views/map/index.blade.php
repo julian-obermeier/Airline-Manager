@@ -15,42 +15,46 @@
 @endphp
 
 <style>
-    .world-map-wrap{position:relative;width:100%;overflow:hidden;border:1px solid rgba(32,52,78,.8);border-radius:18px;background:
-        radial-gradient(circle at 22% 28%,rgba(57,184,255,.08),transparent 20rem),
-        linear-gradient(180deg,#081827,#071321)}
+    .world-map-wrap{position:relative;width:100%;overflow:hidden;border:1px solid #dbe4ef;border-radius:18px;background:
+        radial-gradient(circle at 22% 28%,rgba(37,99,235,.08),transparent 20rem),
+        linear-gradient(180deg,#f9fbff,#eef4fb)}
     .world-map{display:block;width:100%;height:auto;min-height:440px}
-    .map-grid{stroke:rgba(126,214,255,.08);stroke-width:1}
-    .map-route{stroke:#39b8ff;stroke-width:3;stroke-linecap:round;opacity:.72}
-    .map-route-glow{stroke:#39b8ff;stroke-width:10;stroke-linecap:round;opacity:.08}
-    .map-airport{fill:#91a5bb;stroke:#071321;stroke-width:2}
-    .map-airport.network{fill:#39b8ff}
-    .map-airport.home{fill:#39d98a;stroke:#eafff5;stroke-width:3}
-    .map-label{fill:#dcecff;font-size:17px;font-weight:800;paint-order:stroke;stroke:#071321;stroke-width:4px;stroke-linejoin:round}
-    .map-plane{fill:#ffca5c;stroke:#fff0bd;stroke-width:2}
-    .map-flight-label{fill:#fff4ca;font-size:15px;font-weight:800;paint-order:stroke;stroke:#071321;stroke-width:4px}
+    .map-grid{stroke:rgba(90,116,148,.12);stroke-width:1}
+    .map-route{stroke:#2563eb;stroke-width:3;stroke-linecap:round;opacity:.72}
+    .map-route-glow{stroke:#60a5fa;stroke-width:10;stroke-linecap:round;opacity:.12}
+    .map-airport{fill:#94a3b8;stroke:#fff;stroke-width:2}
+    .map-airport.network{fill:#2563eb}
+    .map-airport.home{fill:#059669;stroke:#fff;stroke-width:3}
+    .map-label{fill:#1f3b5d;font-size:17px;font-weight:800;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+    .map-plane{fill:#f59e0b;stroke:#fff;stroke-width:2}
+    .map-flight-label{fill:#92400e;font-size:15px;font-weight:800;paint-order:stroke;stroke:#fff;stroke-width:4px}
     .map-legend{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px;color:var(--muted);font-size:.82rem}
     .map-legend span{display:inline-flex;align-items:center;gap:7px}
-    .legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;background:#91a5bb}
-    .legend-dot.network{background:#39b8ff}.legend-dot.home{background:#39d98a}.legend-dot.flight{background:#ffca5c}
+    .legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;background:#94a3b8}
+    .legend-dot.network{background:#2563eb}.legend-dot.home{background:#059669}.legend-dot.flight{background:#f59e0b}
 </style>
 
 <section class="grid grid-4">
     <article class="card metric">
+        <div class="metric-icon"><x-icon name="airport" :size="19" /></div>
         <span class="eyebrow">AIRPORT DATABASE</span>
         <strong>{{ $mapAirports->count() }}</strong>
         <small>Flughäfen in der aktuellen Datenbank</small>
     </article>
     <article class="card metric">
+        <div class="metric-icon"><x-icon name="route" :size="19" /></div>
         <span class="eyebrow">NETWORK</span>
         <strong>{{ $mapRoutes->count() }}</strong>
         <small>aktive Strecken deiner Airline</small>
     </article>
     <article class="card metric">
+        <div class="metric-icon"><x-icon name="plane" :size="19" /></div>
         <span class="eyebrow">LIVE TRAFFIC</span>
         <strong>{{ $mapFlights->count() }}</strong>
         <small>Boarding oder aktuell unterwegs</small>
     </article>
     <article class="card metric">
+        <div class="metric-icon"><x-icon name="map" :size="19" /></div>
         <span class="eyebrow">HOME BASE</span>
         <strong>{{ $mapAirports->firstWhere('home', true)['iata'] ?? '–' }}</strong>
         <small>{{ $mapAirports->firstWhere('home', true)['city'] ?? 'Keine Basis' }}</small>
