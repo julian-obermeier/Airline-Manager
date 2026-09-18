@@ -68,6 +68,11 @@ class Airline extends Model
         return $this->hasMany(Flight::class);
     }
 
+    public function crewMembers(): HasMany
+    {
+        return $this->hasMany(CrewMember::class);
+    }
+
     public function ledgerAccounts(): HasMany
     {
         return $this->hasMany(LedgerAccount::class);
