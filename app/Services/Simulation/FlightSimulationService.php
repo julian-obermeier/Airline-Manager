@@ -9,6 +9,7 @@ use App\Models\LedgerAccount;
 use App\Models\LedgerEntry;
 use App\Models\LedgerTransaction;
 use App\Models\World;
+use App\Services\Commercial\MarketingService;
 use App\Services\Commercial\RevenueManagementService;
 use App\Services\Operations\AirportOperationsService;
 use App\Services\Operations\CrewService;
@@ -23,6 +24,7 @@ class FlightSimulationService
         private readonly FlightScheduleService $flightSchedules,
         private readonly CrewService $crewService,
         private readonly AirportOperationsService $airportOperations,
+        private readonly MarketingService $marketing,
     ) {
     }
 
@@ -43,6 +45,7 @@ class FlightSimulationService
             'in_air' => 0,
             'completed' => 0,
             'crew_cancelled' => 0,
+            'campaigns_expired' => 0,
         ];
 
         World::query()
@@ -51,6 +54,9 @@ class FlightSimulationService
             ->each(function (World $world) use ($realNow, &$summary): void {
                 $simulationNow = $this->advanceWorldClock($world, $realNow);
                 $summary['worlds']++;
+
+                $marketing = $this->marketing->processWorld($world, $simulationNow);
+                $summary['campaigns_expired'] += (int) ($marketing['campaigns_expired'] ?? 0);
 
                 $planning = $this->flightSchedules->generateForWorld($world, $simulationNow);
                 $summary['schedules_checked'] += $planning['schedules'];
@@ -124,6 +130,7 @@ class FlightSimulationService
             && $simulationNow->greaterThanOrEqualTo($departureAt)
             && ! $this->crewService->readyForDeparture($flight)) {
             $this->crewService->cancelForShortage($flight);
+            $this->marketing->recordCancellation($flight->fresh(), 'crew_shortage');
 
             return 'crew_cancelled';
         }
@@ -270,6 +277,8 @@ class FlightSimulationService
         $demandIndex = (float) ($commercial['route_demand_index'] ?? data_get($flight->route->settings, 'demand_index', 1.0));
         $progress = $finalize ? 1.0 : $this->bookingProgress($flight, $simulationNow);
         $dayFactor = in_array($flight->scheduled_departure_at->dayOfWeekIso, [5, 7], true) ? 1.06 : 1.00;
+        $marketingSnapshot = $this->marketing->demandSnapshot($flight, $simulationNow);
+        $marketingMultiplier = (float) ($marketingSnapshot['multiplier'] ?? 1.0);
         $previousPassengers = (int) $flight->passengers_booked;
         $totalBooked = 0;
         $totalCapacity = 0;
@@ -296,7 +305,10 @@ class FlightSimulationService
             $priceFactor = pow($referenceFareMinor / max(1, $fareMinor), $sensitivity);
             $variationSeed = (int) sprintf('%u', crc32($flight->id.':'.$cabin));
             $variation = (($variationSeed % 21) - 10) / 100;
-            $targetLoadFactor = min(0.98, max(0.05, ($baseLoad + $variation) * $demandIndex * $dayFactor * $priceFactor));
+            $targetLoadFactor = min(
+                0.98,
+                max(0.05, ($baseLoad + $variation) * $demandIndex * $dayFactor * $priceFactor * $marketingMultiplier)
+            );
             $targetBooked = min($capacity, (int) floor($capacity * $targetLoadFactor * $progress));
             $booked = min($capacity, max($alreadyBooked, $targetBooked));
 
@@ -312,6 +324,7 @@ class FlightSimulationService
             'route_demand_index' => $demandIndex,
             'booking_window_days' => (int) config('simulation.booking_window_days', 14),
             'booking_progress' => round($progress, 4),
+            'marketing' => $marketingSnapshot,
             'cabins' => $cabins,
         ];
         $data['load_factor'] = $totalCapacity > 0 ? round($totalBooked / $totalCapacity, 4) : 0;
@@ -454,6 +467,7 @@ class FlightSimulationService
 
             $this->crewService->completeFlight($locked);
             $this->airportOperations->markFlightSlotsUsed($locked);
+            $this->marketing->recordCompletedFlight($locked->fresh());
             $completed = true;
         });
 
