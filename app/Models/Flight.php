@@ -64,4 +64,9 @@ class Flight extends Model
     {
         return $this->belongsTo(FlightSchedule::class);
     }
+
+    public function crewAssignments(): HasMany
+    {
+        return $this->hasMany(FlightCrewAssignment::class);
+    }
 }
