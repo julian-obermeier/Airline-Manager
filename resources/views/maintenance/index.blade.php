@@ -71,7 +71,7 @@
             @csrf
             <div class="field">
                 <label for="maintenance_aircraft_id">Flugzeug</label>
-                <select id="maintenance_aircraft_id" name="aircraft_id" required>
+                <select id="maintenance_aircraft_id" name="aircraft_id" data-searchable data-search-placeholder="Kennzeichen oder Flugzeugtyp suchen…" required>
                     <option value="">Bitte auswählen</option>
                     @foreach($fleet as $aircraft)
                         <option value="{{ $aircraft->id }}" @selected(old('aircraft_id') === $aircraft->id)>
