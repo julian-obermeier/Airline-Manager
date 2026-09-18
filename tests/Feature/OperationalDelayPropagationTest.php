@@ -50,6 +50,8 @@ class OperationalDelayPropagationTest extends TestCase
         $airline = Airline::query()->where('name', 'Delay Air')->firstOrFail();
         $type = AircraftType::query()->where('model', 'E195-E2')->firstOrFail();
 
+        $this->createQualifiedCrew($airline, $type, $frankfurt);
+
         $this->post(route('operations.fleet.purchase'), [
             'aircraft_type_id' => $type->id,
             'registration' => 'D-ADLY',
@@ -116,5 +118,39 @@ class OperationalDelayPropagationTest extends TestCase
         $this->assertTrue((bool) data_get($returnFlight->operational_data, 'operations.delay_evaluated'));
         $this->assertGreaterThanOrEqual(230, (int) $returnFlight->delay_minutes);
         $this->assertGreaterThan(0, (int) data_get($returnFlight->operational_data, 'operations.rotation_delay_minutes'));
+    }
+
+    private function createQualifiedCrew(Airline $airline, AircraftType $type, Airport $base): void
+    {
+        $roles = ['captain', 'first_officer', 'cabin_crew', 'cabin_crew', 'cabin_crew'];
+
+        foreach ($roles as $index => $role) {
+            $member = CrewMember::create([
+                'world_id' => $airline->world_id,
+                'airline_id' => $airline->id,
+                'home_airport_id' => $base->id,
+                'current_airport_id' => $base->id,
+                'employee_number' => 'TST'.str_pad((string) ($index + 1), 3, '0', STR_PAD_LEFT),
+                'first_name' => 'Crew',
+                'last_name' => (string) ($index + 1),
+                'role' => $role,
+                'status' => 'active',
+                'monthly_salary_minor' => 500000,
+                'currency' => $airline->base_currency,
+                'hired_at' => now()->subDay(),
+                'max_duty_minutes_day' => 780,
+                'min_rest_minutes' => 660,
+            ]);
+
+            if (in_array($role, ['captain', 'first_officer'], true)) {
+                CrewQualification::create([
+                    'crew_member_id' => $member->id,
+                    'aircraft_type_id' => $type->id,
+                    'qualification_type' => 'type_rating',
+                    'valid_from' => now()->subDay()->toDateString(),
+                    'status' => 'active',
+                ]);
+            }
+        }
     }
 }
