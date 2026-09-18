@@ -59,6 +59,11 @@ class AirlineRoute extends Model
         return $this->hasOne(RouteCommercialMetric::class, 'route_id');
     }
 
+    public function marketPosition(): HasOne
+    {
+        return $this->hasOne(RouteMarketPosition::class, 'route_id');
+    }
+
     public function marketingCampaigns(): HasMany
     {
         return $this->hasMany(MarketingCampaign::class, 'route_id');
