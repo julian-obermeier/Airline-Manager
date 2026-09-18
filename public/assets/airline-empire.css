@@ -80,3 +80,18 @@ a{color:inherit;text-decoration:none}button,input,select,textarea{font:inherit}.
 .opportunity-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.opportunity-card{display:grid;gap:12px;padding:15px;border:1px solid var(--line);border-radius:15px;background:#fff;box-shadow:var(--shadow-sm);transition:.16s ease}.opportunity-card:hover{transform:translateY(-2px);border-color:#b8cbe3;box-shadow:var(--shadow)}.opportunity-iata{font-size:1.45rem;letter-spacing:-.04em}.opportunity-score{width:46px;height:46px;border-radius:13px;display:grid;place-items:center;background:#eaf2ff;color:#1d4ed8;font-weight:900}
 @media(max-width:1180px){.planner-aircraft-grid,.opportunity-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.route-analysis-facts{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:760px){.route-analysis-hero,.planner-aircraft-grid,.opportunity-grid,.route-analysis-facts{grid-template-columns:1fr}}
+
+
+/* Real aircraft photography via Wikimedia Commons */
+.aircraft-visual[data-aircraft-photo]{min-height:190px;padding:0;background:#eef3f8}
+.aircraft-photo-image{display:none;position:relative;z-index:2;width:100%;height:190px;object-fit:cover;object-position:center;border-radius:15px}
+.aircraft-visual.has-photo .aircraft-photo-image{display:block}
+.aircraft-photo-fallback{width:100%;display:grid;place-items:center;position:relative;z-index:1;padding:8px 12px 20px}
+.aircraft-visual.has-photo .aircraft-photo-fallback{display:none}
+.aircraft-visual.has-photo:before{content:"";position:absolute;z-index:3;inset:45% 0 0;background:linear-gradient(180deg,transparent,rgba(6,18,35,.52));pointer-events:none}
+.aircraft-visual-label{position:absolute!important;left:11px!important;right:auto!important;bottom:10px!important;z-index:5!important;background:rgba(255,255,255,.92)!important;color:#1e293b!important;box-shadow:0 3px 10px rgba(15,23,42,.12)}
+.aircraft-photo-credit{display:none;position:absolute;right:9px;top:9px;z-index:6;max-width:72%;padding:5px 8px;border-radius:8px;background:rgba(15,23,42,.76);color:#fff!important;font-size:.61rem;font-weight:700;line-height:1.2;text-align:right;backdrop-filter:blur(5px);box-shadow:0 3px 10px rgba(15,23,42,.18)}
+.aircraft-visual.has-photo .aircraft-photo-credit{display:block}
+.aircraft-photo-credit:hover{background:rgba(15,23,42,.92)}
+.aircraft-visual.photo-fallback .aircraft-photo-fallback{display:grid}
+@media(max-width:720px){.aircraft-photo-image{height:170px}.aircraft-visual[data-aircraft-photo]{min-height:170px}}
