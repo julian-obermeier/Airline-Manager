@@ -152,6 +152,7 @@ class FlightScheduleService
             : $this->revenueManagement->cabinLayout($totalSeats, $airline->business_model);
 
         $fares = $this->revenueManagement->routeFares($route, $airline->business_model);
+        $pricingPolicy = $this->revenueManagement->routePricingPolicy($route);
 
         return [
             'planned_block_minutes' => $route->planned_block_minutes,
@@ -159,21 +160,31 @@ class FlightScheduleService
             'commercial' => [
                 'route_demand_index' => (float) data_get($route->settings, 'demand_index', 1.0),
                 'booking_window_days' => (int) config('simulation.booking_window_days', 14),
+                'pricing' => $pricingPolicy,
                 'cabins' => [
                     'economy' => [
                         'capacity' => $cabins['economy'],
+                        'base_fare_minor' => $fares['economy_minor'],
                         'fare_minor' => $fares['economy_minor'],
                         'booked' => 0,
+                        'revenue_minor' => 0,
+                        'fare_bucket' => 'initial',
                     ],
                     'business' => [
                         'capacity' => $cabins['business'],
+                        'base_fare_minor' => $fares['business_minor'],
                         'fare_minor' => $fares['business_minor'],
                         'booked' => 0,
+                        'revenue_minor' => 0,
+                        'fare_bucket' => 'initial',
                     ],
                     'first' => [
                         'capacity' => $cabins['first'],
+                        'base_fare_minor' => $fares['first_minor'],
                         'fare_minor' => $fares['first_minor'],
                         'booked' => 0,
+                        'revenue_minor' => 0,
+                        'fare_bucket' => 'initial',
                     ],
                 ],
             ],
