@@ -7,22 +7,26 @@
 
 @section('content')
 <section class="grid grid-4">
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="route" :size="19" /></div>
         <span class="eyebrow">DYNAMISCHE ROUTEN</span>
         <strong>{{ $dynamicRoutes }}</strong>
         <small>von {{ $routes->count() }} aktiven Routen</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="plane" :size="19" /></div>
         <span class="eyebrow">DYNAMISCHE FLÜGE</span>
         <strong>{{ $changedFlights }}</strong>
         <small>kommende Flüge aktuell abweichend vom Basistarif</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="revenue" :size="19" /></div>
         <span class="eyebrow">FARE EVENTS 24H</span>
         <strong>{{ $eventsToday }}</strong>
         <small>automatische Preisänderungen</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="market" :size="19" /></div>
         <span class="eyebrow">BUCKETS</span>
         <strong>{{ count((array) config('revenue_management.load_buckets', [])) }}</strong>
         <small>Auslastungsstufen plus Abflugzeitfaktor</small>
