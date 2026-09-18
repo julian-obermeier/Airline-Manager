@@ -97,7 +97,10 @@ class GameBootstrapSeeder extends Seeder
 
         foreach ($aircraftTypes as $type) {
             $fuelBurn = $type['fuel_burn_l_per_hour'];
-            $visualGroup = $type['visual_group'] ?? 'narrowbody';
+            $visualGroup = $type['visual_group'] ?? match ($type['model']) {
+                'A220', 'E195-E2' => 'regional',
+                default => 'narrowbody',
+            };
             $productionStatus = $type['production_status'] ?? 'active';
             unset(
                 $type['fuel_burn_l_per_hour'],
