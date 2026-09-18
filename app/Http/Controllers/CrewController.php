@@ -11,6 +11,7 @@ use App\Models\Flight;
 use App\Models\FlightCrewAssignment;
 use App\Models\World;
 use App\Services\Operations\CrewService;
+use App\Services\Operations\FictionalCrewNameGenerator;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -20,8 +21,10 @@ use Illuminate\View\View;
 
 class CrewController extends Controller
 {
-    public function __construct(private readonly CrewService $crewService)
-    {
+    public function __construct(
+        private readonly CrewService $crewService,
+        private readonly FictionalCrewNameGenerator $nameGenerator,
+    ) {
     }
 
     public function index(Request $request): View|RedirectResponse
@@ -102,8 +105,6 @@ class CrewController extends Controller
         [$world, $airline] = $context;
 
         $validated = $request->validate([
-            'first_name' => ['required', 'string', 'min:2', 'max:80'],
-            'last_name' => ['required', 'string', 'min:2', 'max:80'],
             'role' => ['required', Rule::in(['captain', 'first_officer', 'cabin_crew'])],
             'base_airport_id' => ['required', 'string', 'exists:airports,id'],
             'monthly_salary' => ['required', 'numeric', 'min:1000', 'max:50000'],
@@ -119,16 +120,17 @@ class CrewController extends Controller
 
         $hiredAt = $world->simulated_at ?? now();
         $employeeNumber = $this->nextEmployeeNumber($airline);
+        $generatedName = $this->nameGenerator->generate();
 
-        DB::transaction(function () use ($validated, $world, $airline, $hiredAt, $employeeNumber): void {
+        DB::transaction(function () use ($validated, $world, $airline, $hiredAt, $employeeNumber, $generatedName): void {
             $member = CrewMember::create([
                 'world_id' => $world->id,
                 'airline_id' => $airline->id,
                 'home_airport_id' => $validated['base_airport_id'],
                 'current_airport_id' => $validated['base_airport_id'],
                 'employee_number' => $employeeNumber,
-                'first_name' => trim($validated['first_name']),
-                'last_name' => trim($validated['last_name']),
+                'first_name' => $generatedName['first_name'],
+                'last_name' => $generatedName['last_name'],
                 'role' => $validated['role'],
                 'status' => 'active',
                 'monthly_salary_minor' => (int) round(((float) $validated['monthly_salary']) * 100),
@@ -137,7 +139,8 @@ class CrewController extends Controller
                 'max_duty_minutes_day' => (int) config('crew.default_max_duty_minutes_day', 780),
                 'min_rest_minutes' => (int) config('crew.default_min_rest_minutes', 660),
                 'metadata' => [
-                    'source' => 'manual_recruitment',
+                    'source' => 'generated_recruitment',
+                    'name_generated' => true,
                     'simulation_rules' => 'crew_v1',
                 ],
             ]);
@@ -158,7 +161,7 @@ class CrewController extends Controller
 
         return redirect()->route('crew.index')->with(
             'success',
-            $employeeNumber.' wurde eingestellt. Offene Flüge wurden automatisch neu auf Crew geprüft.'
+            $generatedName['first_name'].' '.$generatedName['last_name'].' ('.$employeeNumber.') wurde eingestellt. Offene Flüge wurden automatisch neu auf Crew geprüft.'
         );
     }
 
