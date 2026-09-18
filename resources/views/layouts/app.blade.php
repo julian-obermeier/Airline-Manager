@@ -18,6 +18,7 @@
             ['route' => 'operations.index', 'match' => 'operations.*', 'label' => 'Operations', 'icon' => 'operations'],
         ],
         'Planung & Netzwerk' => [
+            ['route' => 'route-planner.index', 'match' => 'route-planner.*', 'label' => 'Streckenplaner', 'icon' => 'route'],
             ['route' => 'schedules.index', 'match' => 'schedules.*', 'label' => 'Flugpläne', 'icon' => 'schedule'],
             ['route' => 'map.index', 'match' => 'map.*', 'label' => 'Weltkarte', 'icon' => 'map'],
             ['route' => 'airport-operations.index', 'match' => 'airport-operations.*', 'label' => 'Airports & Slots', 'icon' => 'airport'],
