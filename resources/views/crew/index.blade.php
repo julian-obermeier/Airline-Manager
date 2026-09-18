@@ -76,11 +76,7 @@
             <div class="field">
                 <label for="base_airport_id">Crew-Basis</label>
                 <select id="base_airport_id" name="base_airport_id" required>
-                    @foreach($airports as $airport)
-                        <option value="{{ $airport->id }}" @selected(old('base_airport_id', $airline->home_airport_id) === $airport->id)>
-                            {{ $airport->iata_code }} · {{ $airport->city }}
-                        </option>
-                    @endforeach
+                    <x-airport-options :airports="$airports" :selected="old('base_airport_id', $airline->home_airport_id)" />
                 </select>
                 <span class="help">Neue Crew startet physisch an dieser Basis.</span>
             </div>
