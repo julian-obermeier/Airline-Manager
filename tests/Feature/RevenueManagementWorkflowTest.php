@@ -78,11 +78,11 @@ class RevenueManagementWorkflowTest extends TestCase
         $this->post(route('operations.routes.store'), [
             'origin_airport_id' => $fra->id,
             'destination_airport_id' => $muc->id,
-        ])->assertRedirect(route('operations.index'));
+        ])->assertRedirect(route('revenue-management.index'));
 
         $route = $airline->routes()->firstOrFail();
 
-        $this->patch(route('operations.routes.fares.update', $route), [
+        $this->patch(route('revenue-management.fares.update', $route), [
             'economy_fare' => '100.00',
             'business_fare' => '220.00',
             'first_fare' => '0.00',
