@@ -136,6 +136,13 @@ class RevenueManagementController extends Controller
             (int) $validated['ceiling_percent'],
         );
 
+        Flight::query()
+            ->where('route_id', $route->id)
+            ->whereIn('status', ['scheduled', 'boarding'])
+            ->where('scheduled_departure_at', '>=', $world->simulated_at ?? now())
+            ->orderBy('scheduled_departure_at')
+            ->each(fn (Flight $flight) => $this->revenueManagement->initializeFlightPricing($flight));
+
         return redirect()->route('revenue-management.index')->with(
             'success',
             'Revenue-Management-Policy für '.$route->origin?->iata_code.' → '.$route->destination?->iata_code.' wurde gespeichert.'
