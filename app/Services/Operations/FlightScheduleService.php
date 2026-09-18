@@ -17,6 +17,7 @@ class FlightScheduleService
     public function __construct(
         private readonly RevenueManagementService $revenueManagement,
         private readonly MaintenanceService $maintenance,
+        private readonly CrewService $crewService,
     ) {
     }
 
@@ -249,7 +250,7 @@ class FlightScheduleService
             $returnExists = $existing->contains(fn (Flight $flight): bool => $flight->route_id === $returnRoute->id);
 
             if (! $outboundExists) {
-                Flight::create([
+                $outboundFlight = Flight::create([
                     'world_id' => $schedule->world_id,
                     'airline_id' => $schedule->airline_id,
                     'route_id' => $outboundRoute->id,
@@ -272,11 +273,12 @@ class FlightScheduleService
                         ]
                     ),
                 ]);
+                $this->crewService->assignCrew($outboundFlight);
                 $created++;
             }
 
             if (! $returnExists) {
-                Flight::create([
+                $returnFlight = Flight::create([
                     'world_id' => $schedule->world_id,
                     'airline_id' => $schedule->airline_id,
                     'route_id' => $returnRoute->id,
@@ -300,6 +302,7 @@ class FlightScheduleService
                         ]
                     ),
                 ]);
+                $this->crewService->assignCrew($returnFlight);
                 $created++;
             }
         });
