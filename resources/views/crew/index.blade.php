@@ -75,14 +75,14 @@
             </div>
             <div class="field">
                 <label for="base_airport_id">Crew-Basis</label>
-                <select id="base_airport_id" name="base_airport_id" required>
+                <select id="base_airport_id" name="base_airport_id" data-searchable data-search-placeholder="Crew-Basis suchen…" required>
                     <x-airport-options :airports="$airports" :selected="old('base_airport_id', $airline->home_airport_id)" />
                 </select>
                 <span class="help">Neue Crew startet physisch an dieser Basis.</span>
             </div>
             <div class="field">
                 <label for="aircraft_type_id">Initiales Type Rating</label>
-                <select id="aircraft_type_id" name="aircraft_type_id">
+                <select id="aircraft_type_id" name="aircraft_type_id" data-searchable data-search-placeholder="Flugzeugmuster suchen…">
                     <option value="">Kein Rating</option>
                     @foreach($aircraftTypes as $type)
                         <option value="{{ $type->id }}" @selected(old('aircraft_type_id') === $type->id)>
@@ -125,7 +125,7 @@
                 </div>
                 <div class="field">
                     <label for="qualification_aircraft_type_id">Flugzeugmuster</label>
-                    <select id="qualification_aircraft_type_id" name="aircraft_type_id" required>
+                    <select id="qualification_aircraft_type_id" name="aircraft_type_id" data-searchable data-search-placeholder="Type Rating suchen…" required>
                         @foreach($aircraftTypes as $type)
                             <option value="{{ $type->id }}">{{ $type->manufacturer }} {{ $type->model }} {{ $type->variant }}</option>
                         @endforeach
