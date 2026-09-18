@@ -44,6 +44,19 @@ class GameBootstrapSeeder extends Seeder
             ['icao_code' => 'EGLL', 'iata_code' => 'LHR', 'name' => 'London Heathrow Airport', 'city' => 'London', 'country_code' => 'GB', 'latitude' => 51.470000, 'longitude' => -0.454300, 'timezone' => 'Europe/London', 'elevation_ft' => 83],
         ];
 
+        $slotCapacities = [
+            'FRA' => 20,
+            'MUC' => 18,
+            'BER' => 12,
+            'DUS' => 12,
+            'HAM' => 10,
+            'CGN' => 10,
+            'VIE' => 14,
+            'ZRH' => 12,
+            'AMS' => 20,
+            'LHR' => 18,
+        ];
+
         foreach ($airports as $airport) {
             Airport::query()->updateOrCreate(
                 ['icao_code' => $airport['icao_code']],
@@ -52,7 +65,10 @@ class GameBootstrapSeeder extends Seeder
                     'cargo_capacity_tonnes_yearly' => null,
                     'runways' => null,
                     'operational_restrictions' => null,
-                    'metadata' => ['bootstrap' => true],
+                    'metadata' => [
+                        'bootstrap' => true,
+                        'slot_capacity_15min' => $slotCapacities[$airport['iata_code']] ?? 12,
+                    ],
                 ]
             );
         }
