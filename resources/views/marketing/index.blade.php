@@ -62,7 +62,7 @@
             </div>
             <div class="field">
                 <label for="route_id">Route</label>
-                <select id="route_id" name="route_id">
+                <select id="route_id" name="route_id" data-searchable data-search-placeholder="Route suchen…">
                     <option value="">Nur bei Streckenkampagne</option>
                     @foreach($routes as $route)
                         <option value="{{ $route->id }}" @selected(old('route_id') === $route->id)>
