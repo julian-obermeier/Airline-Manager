@@ -273,6 +273,7 @@ class OperationsController extends Controller
             'settings' => [
                 'calculation' => 'great_circle_v1',
                 'fares' => $this->revenueManagement->defaultFares($distanceKm, $airline->business_model),
+                'pricing_policy' => $this->revenueManagement->defaultPricingPolicy(),
                 'demand_index' => $this->revenueManagement->demandIndex($origin, $destination),
             ],
         ]);
@@ -310,7 +311,7 @@ class OperationsController extends Controller
 
         $route->forceFill(['settings' => $settings])->save();
 
-        return redirect()->route('operations.index')->with('success', 'Ticketpreise wurden gespeichert. Sie gelten für neu geplante Flüge.');
+        return redirect()->route('operations.index')->with('success', 'Basistarife wurden gespeichert. Neue Flüge übernehmen sie als Ausgangspunkt für das Revenue Management.');
     }
 
     public function scheduleFlight(Request $request): RedirectResponse
@@ -390,6 +391,7 @@ class OperationsController extends Controller
             : $this->revenueManagement->cabinLayout($totalSeats, $airline->business_model);
 
         $fares = $this->revenueManagement->routeFares($route, $airline->business_model);
+        $pricingPolicy = $this->revenueManagement->routePricingPolicy($route);
 
         $flight = Flight::create([
             'world_id' => $world->id,
@@ -409,21 +411,31 @@ class OperationsController extends Controller
                 'commercial' => [
                     'route_demand_index' => (float) data_get($route->settings, 'demand_index', 1.0),
                     'booking_window_days' => (int) config('simulation.booking_window_days', 14),
+                    'pricing' => $pricingPolicy,
                     'cabins' => [
                         'economy' => [
                             'capacity' => $cabins['economy'],
+                            'base_fare_minor' => $fares['economy_minor'],
                             'fare_minor' => $fares['economy_minor'],
                             'booked' => 0,
+                            'revenue_minor' => 0,
+                            'fare_bucket' => 'initial',
                         ],
                         'business' => [
                             'capacity' => $cabins['business'],
+                            'base_fare_minor' => $fares['business_minor'],
                             'fare_minor' => $fares['business_minor'],
                             'booked' => 0,
+                            'revenue_minor' => 0,
+                            'fare_bucket' => 'initial',
                         ],
                         'first' => [
                             'capacity' => $cabins['first'],
+                            'base_fare_minor' => $fares['first_minor'],
                             'fare_minor' => $fares['first_minor'],
                             'booked' => 0,
+                            'revenue_minor' => 0,
+                            'fare_bucket' => 'initial',
                         ],
                     ],
                 ],
