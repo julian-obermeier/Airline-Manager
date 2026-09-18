@@ -101,7 +101,13 @@
                          data-seats="{{ $seats }}"
                          data-range="{{ (int) ($aircraft->type?->range_km ?? 0) }}"
                          data-status="{{ $aircraft->status }}">
-                    <x-aircraft-visual :group="$visualGroup" :label="$aircraft->registration" />
+                    <x-aircraft-visual
+                        :group="$visualGroup"
+                        :label="$aircraft->registration"
+                        :type-id="$aircraft->type?->id"
+                        :manufacturer="$aircraft->type?->manufacturer"
+                        :model="$aircraft->type?->model"
+                    />
 
                     <div class="aircraft-card-body">
                         <div style="display:flex;justify-content:space-between;gap:10px;align-items:start">
