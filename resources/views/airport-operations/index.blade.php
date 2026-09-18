@@ -77,7 +77,7 @@
     </section>
 </div>
 
-<section class="card" style="margin-top:18px">
+<section class="card" style="margin-top:18px" data-table-filter>
     <div class="section-title">
         <div>
             <span class="eyebrow">STATION NETWORK</span>
@@ -89,6 +89,10 @@
     @if($stations->isEmpty())
         <div class="empty">Noch keine Stationen vorhanden.</div>
     @else
+        <div class="filter-bar">
+            <div class="field search"><label>Stationen suchen</label><input type="search" data-table-search placeholder="IATA, ICAO, Stadt oder Flughafenname…"></div>
+            <div><span class="game-label">Treffer</span><div class="filter-count" data-table-count>{{ $stations->count() }}</div></div>
+        </div>
         <div class="table-wrap">
             <table class="data-table">
                 <thead>
@@ -103,7 +107,7 @@
                 </thead>
                 <tbody>
                 @foreach($stations as $station)
-                    <tr>
+                    <tr data-filter-row data-search="{{ $station->airport?->iata_code }} {{ $station->airport?->icao_code }} {{ $station->airport?->city }} {{ $station->airport?->name }}">
                         <td>
                             <strong>{{ $station->airport?->iata_code }} / {{ $station->airport?->icao_code }}</strong><br>
                             <span class="muted">{{ $station->airport?->city }} · {{ $station->airport?->name }}</span>
