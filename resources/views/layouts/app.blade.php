@@ -23,7 +23,8 @@
             ['route' => 'airport-operations.index', 'match' => 'airport-operations.*', 'label' => 'Airports & Slots', 'icon' => 'airport'],
         ],
         'Flotte & Personal' => [
-            ['route' => 'fleet-market.index', 'match' => 'fleet-market.*', 'label' => 'Flottenmarkt', 'icon' => 'fleet'],
+            ['route' => 'fleet.index', 'match' => 'fleet.*', 'label' => 'Meine Flotte', 'icon' => 'fleet'],
+            ['route' => 'fleet-market.index', 'match' => 'fleet-market.*', 'label' => 'Flottenmarkt', 'icon' => 'market'],
             ['route' => 'maintenance.index', 'match' => 'maintenance.*', 'label' => 'Maintenance', 'icon' => 'maintenance'],
             ['route' => 'crew.index', 'match' => 'crew.*', 'label' => 'Personal & Crew', 'icon' => 'crew'],
         ],
