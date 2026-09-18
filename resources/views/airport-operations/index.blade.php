@@ -7,22 +7,26 @@
 
 @section('content')
 <section class="grid grid-4">
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="airport" :size="19" /></div>
         <span class="eyebrow">STATIONEN</span>
         <strong>{{ $stations->where('status', 'active')->count() }}</strong>
         <small>{{ $baseCount }} Base · {{ $outstationCount }} Outstations</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="finance" :size="19" /></div>
         <span class="eyebrow">STATIONSKOSTEN</span>
         <strong>{{ number_format($monthlyStationCostMinor / 100, 2, ',', '.') }} {{ $airline->base_currency }}</strong>
         <small>monatliche Netzwerk-Fixkosten</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="schedule" :size="19" /></div>
         <span class="eyebrow">KOMMENDE SLOTS</span>
         <strong>{{ $upcomingSlotCount }}</strong>
         <small>reservierte Abflug- und Ankunftsslots</small>
     </article>
-    <article class="card metric">
+    <article class="card metric game-panel">
+        <div class="metric-icon"><x-icon name="status" :size="19" /></div>
         <span class="eyebrow">SLOT-FENSTER</span>
         <strong>{{ config('airport_operations.slot_bucket_minutes', 15) }} min</strong>
         <small>Kapazität wird je Flughafen und Zeitfenster geprüft</small>
