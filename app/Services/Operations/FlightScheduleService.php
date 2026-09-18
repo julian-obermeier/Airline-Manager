@@ -18,6 +18,7 @@ class FlightScheduleService
         private readonly RevenueManagementService $revenueManagement,
         private readonly MaintenanceService $maintenance,
         private readonly CrewService $crewService,
+        private readonly AirportOperationsService $airportOperations,
     ) {
     }
 
@@ -69,6 +70,7 @@ class FlightScheduleService
     public function generate(FlightSchedule $schedule, Carbon $from): array
     {
         $schedule->loadMissing([
+            'world',
             'airline',
             'aircraft.type',
             'outboundRoute.origin',
@@ -231,6 +233,12 @@ class FlightScheduleService
             return ['flights_created' => 0, 'skipped' => true];
         }
 
+        if (! $schedule->world
+            || ! $this->airportOperations->canReserveLeg($schedule->world, $outboundRoute, $outboundDeparture, $outboundArrival)
+            || ! $this->airportOperations->canReserveLeg($schedule->world, $returnRoute, $returnDeparture, $returnArrival)) {
+            return ['flights_created' => 0, 'skipped' => true];
+        }
+
         $created = 0;
 
         DB::transaction(function () use (
@@ -273,6 +281,7 @@ class FlightScheduleService
                         ]
                     ),
                 ]);
+                $this->airportOperations->reserveFlight($outboundFlight);
                 $this->crewService->assignCrew($outboundFlight);
                 $created++;
             }
@@ -302,6 +311,7 @@ class FlightScheduleService
                         ]
                     ),
                 ]);
+                $this->airportOperations->reserveFlight($returnFlight);
                 $this->crewService->assignCrew($returnFlight);
                 $created++;
             }
